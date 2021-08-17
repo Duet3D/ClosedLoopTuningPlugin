@@ -120,35 +120,43 @@ export let variables = [
 
 export let tuningManoeuvres = [
 	{
+		name: "Polarity Detection",
+		value: 1,
+		disabled: false
+	},
+	{
 		name: "Zeroing",
-		value: 1
+		value: 2,
+		disabled: false
 	},
 	{
 		name: "Polarity Check",
-		value: 2
+		value: 4,
+		disabled: false
 	},
 	{
 		name: "Control Check",
-		value: 4
+		value: 8,
+		disabled: true
 	},
 	{
 		name: "Encoder Steps Check",
-		value: 8
-	},
-	{
-		name: "Polarity Detection",
-		value: 16
+		value: 16,
+		disabled: true
 	},
 	{
 		name: "Continuous Phase Increase",
-		value: 32
+		value: 32,
+		disabled: true
 	},
 	{
 		name: "Step Manoeuvre",
-		value: 64
+		value: 64,
+		disabled: false
 	},
 	{
 		name: "Ziegler Nichols Manoeuvre",
-		value: 128
+		value: 128,
+		disabled: true
 	}
 ]

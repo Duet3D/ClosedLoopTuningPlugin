@@ -9,12 +9,10 @@
 		<v-card-text class="content flex-grow-1 px-2 py-0">
 
 			<div class="text-h4 text--disabled text-center pt-16" v-if="!data">
-				<v-icon large class="mb-6">mdi-arrow-left</v-icon><br>
 				Select a file to view
 			</div>
 			<div class="text-h4 text--disabled text-center pt-16" v-else-if="variables.length == 0">
 				Select some variables to plot<br>
-				<v-icon large class="mt-6">mdi-arrow-right</v-icon>
 			</div>
 
 			<v-range-slider
@@ -71,6 +69,7 @@ export default {
 						: [],
 					borderColor: variable.colour,
 					fill: false,
+					tension: 0,
 				}));
 
 				let axesRequired = this.variables.map(x => x.axis);
