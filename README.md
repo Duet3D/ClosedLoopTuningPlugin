@@ -42,4 +42,4 @@ If you wish to develop on the plugin, run `npm run serve` in the DWC directory a
 
 Once you have finished developing, or if you just wish to compile from source, run `npm run build` in the DWC directory. This will generate the `/dist` directory within DWC. Copy all the files that start `ClosedLoopTuning....js` from `/dist/js` in **DWC** into the `dist/dwc` folder in **this** repository. Repeat and copy all the files from DWC's `/dist/css` that start `ClosedLoopTuning....css` into this repositories `/dist/dwc` directory.
 
-Finally, compress the contents of this repositories `dist` folder into a zip file (such that `plugin.json` is at the top level of the zip folder).
+Finally, compress the contents of this repositories `dist` folder into a zip file (such that `plugin.json` is at the top level of the zip folder). The resulting zip folder is the compiled plugin that can be uploaded to DWC as described in 'Getting Started'.
