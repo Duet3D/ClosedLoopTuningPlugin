@@ -46,7 +46,7 @@ export let variables = [
 	{
 		id: "currentError",
 		title: "Current Error",
-		filterValue: 4096,
+		filterValue: 8,
 		colour: "#9aedb6",
 		axis: "steps"
 	},
@@ -81,7 +81,7 @@ export let variables = [
 	{
 		id: "stepPhase",
 		title: "Step Phase",
-		filterValue: 8,
+		filterValue: 256,
 		colour: "#4452eb",
 		filter: val => (val / 4095) * 360,
 		axis: "degrees"
@@ -97,7 +97,7 @@ export let variables = [
 	{
 		id: "phaseShift",
 		title: "Phase Shift",
-		filterValue: 256,
+		filterValue: 1024,
 		colour: "#c1c4e3",
 		filter: val => (val / 4095) * 360,
 		axis: "degrees"
@@ -105,14 +105,14 @@ export let variables = [
 	{
 		id: "coilACurrent",
 		title: "Coil A Current",
-		filterValue: 1024,
+		filterValue: 2048,
 		colour: "#b8b8b8",
 		axis: "unitless"
 	},
 	{
 		id: "coilBCurrent",
 		title: "Coil B Current",
-		filterValue: 2048,
+		filterValue: 4096,
 		colour: "#4d4d4d",
 		axis: "unitless"
 	}
