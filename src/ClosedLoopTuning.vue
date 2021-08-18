@@ -4,12 +4,14 @@
 			<v-col cols="12">
 				<Recorder
 					:recordingProgress="-1"
+					@recordingfinished="recordingFinished"
 				/>
 			</v-col>
 		</v-row>
 		<v-row>
 			<v-col cols="12" sm="6" lg="auto" order="1" order-lg="0">
 				<FileSelector 
+					ref="selector"
 					@fileSelect="selected($event)" 
 				/>
 			</v-col>
@@ -92,6 +94,9 @@ export default {
 				this.availableVariables = Object.keys(data).filter(x => x != "Sample");
 				this.loadedData = data;
 			}
+		},
+		recordingFinished() {
+			this.$refs.selector.selectMostRecentFile();
 		}
 	}
 }

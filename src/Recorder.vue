@@ -88,7 +88,7 @@
             <v-checkbox
               v-for="manoeuvre in tuningManoeuvres"
               :key="manoeuvre.value"
-              :label="manoeuvre.name" 
+              :label="(manoeuvre.disabled ? '[Coming Soon!] ' : '') + manoeuvre.name" 
               v-model="calibrationMovement" 
               :value="manoeuvre.value"
               :disabled="manoeuvre.disabled"
@@ -229,6 +229,7 @@ export default {
         const reply = await this.sendCode({ code: "M569.5 P123.0", fromInput: false, log: false });
         if (reply.startsWith('Warning: M569.5: Closed loop data is not being collected')) {
           this.recordingProgress = null;
+          this.$emit("recordingfinished");
           clearInterval(interval);
         } else if (reply.startsWith('Collecting sample:')) {
           let progress = reply.split(":")[1].split("/");
@@ -240,7 +241,7 @@ export default {
   computed: {
     ...mapState('machine/model', {axes: state => state.move.axes.map(axis => ({letter: axis.letter, drivers: axis.drivers}))}),
     availableAxes() {
-      return this.axes.filter(x => x.drivers.length == 1).map(x => ({name: `${x.letter} (${x.drivers[0]})`, value: x.drivers[0]}));
+      return this.axes.filter(x => x.drivers.length == 1).map(x => ({name: `${x.letter} axis (driver ${x.drivers[0]})`, value: x.drivers[0]}));
     },
     totalTime() {
       return Math.round((this.sampleCount / this.sampleRate) * 100) / 100;

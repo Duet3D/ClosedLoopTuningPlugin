@@ -1,11 +1,11 @@
 <template>
-  <v-card height="100%" class="pr-4">
+  <v-card height="100%" class="d-flex flex-column">
     <v-card-title class="pt-2 pb-1">
       <v-icon small class="mr-2">mdi-function-variant</v-icon>
       Variables
     </v-card-title>
 
-    <v-card-text class="content flex-grow-1 px-2 py-0">
+    <v-card-text class="content flex-grow-1 px-2 py-0 pr-4">
       <v-checkbox
         dense
         hide-details
@@ -18,6 +18,14 @@
         :color="variable.colour"
       ></v-checkbox>
     </v-card-text>
+
+    <v-spacer></v-spacer>
+
+    <v-card-actions class="d-flex">
+      <v-btn color="darken-1" @click="selectAll">All</v-btn>
+      <v-spacer></v-spacer>
+      <v-btn color="darken-1" @click="selectedVariables=[]">None</v-btn>
+    </v-card-actions>
 
   </v-card>
 </template>
@@ -48,6 +56,11 @@ export default {
     },
     selectedVariables() {
       this.$emit("input", this.selectedVariables);
+    }
+  },
+  methods: {
+    selectAll() {
+      this.selectedVariables = this.variables.filter(variable => this.availableVariables.includes(variable.title));
     }
   }
 }

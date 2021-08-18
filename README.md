@@ -4,3 +4,6 @@
 
 
 ![Image of the plugin UI](https://repository-images.githubusercontent.com/392753893/06488b0a-3573-45ae-a2c7-0017f91d7f48)
+
+## Getting Started
+

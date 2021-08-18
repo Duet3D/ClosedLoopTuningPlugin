@@ -1,5 +1,5 @@
 <template>
-	<v-card class="d-flex flex-column flex-grow-1" min-height="30rem" height="100%">
+	<v-card class="d-flex flex-column flex-grow-1" min-height="40rem" height="100%">
 		<v-card-title class="pt-2 pb-1">
 			<v-icon dense class="mr-2">mdi-chart-sankey</v-icon>
 			Data Chart
@@ -15,14 +15,18 @@
 				Select some variables to plot<br>
 			</div>
 
-			<v-range-slider
-				v-if="data"
-				v-model="rangeFilter"
-				hide-details
-				:max="data.Sample.length"
-				min="0"
-			></v-range-slider>
-			<canvas ref="chart" v-show="data && variables.length > 0"></canvas>
+			<div style="height: 5%;" v-if="data && variables.length > 0">
+				<v-range-slider
+					
+					v-model="rangeFilter"
+					hide-details
+					:max="data.Sample.length"
+					min="0"
+				></v-range-slider>
+			</div>
+			<div style="height: 95%;" v-show="data && variables.length > 0">
+				<canvas ref="chart"></canvas>
+			</div>
 
 		</v-card-text>
 	</v-card>
