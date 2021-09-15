@@ -118,8 +118,8 @@
           </v-btn>
         </v-col>
         <v-col cols="10">
-          <div v-if="ready && calibrationMovement.includes(0)" class="font-weight-black info--text">{{ customGCODE }}</div>
           <div v-if="ready" :class="{'pt-2': !error && !warning && recordingProgress == null && !calibrationMovement.includes(0)}" class="font-weight-black info--text">{{ GCODECommand }}</div>
+          <div v-if="ready && calibrationMovement.includes(0)" class="font-weight-black info--text">{{ customGCODE }}</div>
           <div v-if="error" class="font-weight-black error--text">{{ error }}</div>
           <div v-if="warning" class="font-weight-black warning--text">{{ warning }}</div>
           <v-progress-linear 
@@ -202,6 +202,14 @@ export default {
         return;
       }
 
+      const reply = await this.sendCode({ code: this.GCODECommand, fromInput: false });
+      if (reply.startsWith('Error: ')) {
+        this.error = reply;
+        return;
+      } else if (reply.startsWith('Warning: ')) {
+        this.warning = reply;
+      }
+
       if (this.calibrationMovement.includes(0)) {
         const reply = await this.sendCode({ code: this.customGCODE, fromInput: false });
         if (reply.startsWith('Error: ')) {
@@ -210,14 +218,6 @@ export default {
         } else if (reply.startsWith('Warning: ')) {
           this.warning = reply;
         }
-      }
-
-      const reply = await this.sendCode({ code: this.GCODECommand, fromInput: false });
-      if (reply.startsWith('Error: ')) {
-        this.error = reply;
-        return;
-      } else if (reply.startsWith('Warning: ')) {
-        this.warning = reply;
       }
 
       this.error = null;

@@ -55,7 +55,7 @@ export default {
 				options: {
 					animation: {duration: 0},
 					maintainAspectRatio: false,
-					scales: {xAxes: [{type: 'linear'}]}
+					scales: {xAxes: [{type: 'linear', scaleLabel: {display: true, labelString: "Time Since Start (ms)"}}]}
 				},
 				data: {
 					datasets: []
@@ -69,7 +69,7 @@ export default {
 					yAxisID: variable.axis,
 					label: variable.title,
 					data: this.data[variable.title] ? 
-						this.data[variable.title].slice(this.rangeFilter[0], this.rangeFilter[1]).map((val, idx) => ({x:idx, y:variable.filter ? variable.filter(val) : val}))
+						this.data[variable.title].map((val, idx) => ({x:this.data.Timestamp[idx], y:variable.filter ? variable.filter(val) : val})).slice(this.rangeFilter[0], this.rangeFilter[1])
 						: [],
 					borderColor: variable.colour,
 					fill: false,
