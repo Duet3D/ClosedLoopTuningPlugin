@@ -81,22 +81,29 @@
             :items="[{text: 'Immediately', value: 0}, {text: 'On next move', value: 1}]"
             label="Collect data"
             v-model="activateMode"
+            :disabled="calibrationMovement > 0"
+            :hint="calibrationMovement > 0 ? 'Only immediate collection is supported when a tuning move is selected.' : ''"
+            persistent-hint
           ></v-select>
         </v-col>
         <v-col cols="3">
-          <v-radio-group class="mt-0 pt-0" label="Movement">
-            <v-checkbox
+          <v-radio-group class="mt-0 pt-0" label="Movement" v-model="calibrationMovement">
+            <v-radio
+              label="None" 
+              :value="-1"
+              dense
+              hide-details
+            />
+            <v-radio
               v-for="manoeuvre in tuningManoeuvres"
               :key="manoeuvre.value"
               :label="(manoeuvre.disabled ? '[Coming Soon!] ' : '') + manoeuvre.name" 
-              v-model="calibrationMovement" 
               :value="manoeuvre.value"
               :disabled="manoeuvre.disabled"
               dense
               hide-details
             />
-            <v-checkbox
-              v-model="calibrationMovement"
+            <v-radio
               :value="0"
               hide-details
             >
@@ -106,7 +113,7 @@
                   v-model="customGCODE"
                 />
               </template>
-            </v-checkbox>
+            </v-radio>
           </v-radio-group>
         </v-col>
       </v-row>
@@ -118,8 +125,8 @@
           </v-btn>
         </v-col>
         <v-col cols="10">
-          <div v-if="ready" :class="{'pt-2': !error && !warning && recordingProgress == null && !calibrationMovement.includes(0)}" class="font-weight-black info--text">{{ GCODECommand }}</div>
-          <div v-if="ready && calibrationMovement.includes(0)" class="font-weight-black info--text">{{ customGCODE }}</div>
+          <div v-if="ready" :class="{'pt-2': !error && !warning && recordingProgress == null && calibrationMovement != 0}" class="font-weight-black info--text">{{ GCODECommand }}</div>
+          <div v-if="ready && calibrationMovement == 0" class="font-weight-black info--text">{{ customGCODE }}</div>
           <div v-if="error" class="font-weight-black error--text">{{ error }}</div>
           <div v-if="warning" class="font-weight-black warning--text">{{ warning }}</div>
           <v-progress-linear 
@@ -151,6 +158,11 @@
         <v-card-actions>
           <v-btn color="error darken-1" text @click="dialogResult(false)">{{ $t('generic.cancel') }}</v-btn>
           <v-spacer></v-spacer>
+          <v-checkbox v-model="dontShowModal" class="pr-2">
+            <template v-slot:label>
+              <span style="font-size: 0.7em">Don't show this again</span>
+            </template>
+          </v-checkbox>
           <v-btn color="blue darken-1" text @click="dialogResult(true)">{{ $t('generic.ok') }}</v-btn>
         </v-card-actions>
       </v-card>
@@ -179,8 +191,9 @@ export default {
     customGCODE: null,
     showDialog: false,
     selectedDriver: null,
+    dontShowModal: false,
     selectedVariables: [],
-    calibrationMovement: [],
+    calibrationMovement: -1,
     recordingProgress: null,      // null = not recording, -1 = recording but unknown progress, >=0 = recording & known progress
     sampleRateContinuous: true,
   }),
@@ -197,7 +210,8 @@ export default {
       }
     },
     async record(_, force=false) {
-      if (this.calibrationMovement.length > 0 && !force) {
+      force |= this.dontShowModal;
+      if (this.calibrationMovement != -1 && !force) {
         this.showDialog = true;
         return;
       }
@@ -210,7 +224,7 @@ export default {
         this.warning = reply;
       }
 
-      if (this.calibrationMovement.includes(0)) {
+      if (this.calibrationMovement == 0) {
         const reply = await this.sendCode({ code: this.customGCODE, fromInput: false });
         if (reply.startsWith('Error: ')) {
           this.error = reply;
@@ -252,13 +266,18 @@ export default {
       let aString = `A${this.activateMode}`;
       let rString = `R${this.sampleRateContinuous ? 0 : this.sampleRate}`;
       let dString = `D${this.selectedVariables.reduce((acc, x) => acc + x.filterValue, 0)}`;
-      let vString = `V${this.calibrationMovement.reduce((a, b) => a+b, 0)}`;
+      let vString = `V${this.calibrationMovement > 0 ? this.calibrationMovement : 0}`;
       return `M569.5 ${pString} ${sString} ${aString} ${rString} ${dString} ${vString}`;
     },
     ready() {
       return this.selectedDriver != null
         && this.selectedVariables.length > 0;
     },
+  },
+  watch: {
+    calibrationMovement: function() {
+      this.activateMode = 0;
+    }
   }
 }
 </script>

@@ -113,3 +113,9 @@ canvas {
 	position: absolute;
 }
 </style>
+
+<style>
+.chartjs-size-monitor {
+	position: relative !important;
+}
+</style>

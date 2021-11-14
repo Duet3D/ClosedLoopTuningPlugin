@@ -31,7 +31,7 @@ export let variables = [
 	},
 	{
 		id: "currentMotorSteps",
-		title: "Current Motor Steps",
+		title: "Measured Motor Steps",
 		filterValue: 2,
 		colour: "#34eb71",
 		axis: "steps"
@@ -80,7 +80,7 @@ export let variables = [
 	},
 	{
 		id: "stepPhase",
-		title: "Step Phase",
+		title: "Measured Step Phase",
 		filterValue: 256,
 		colour: "#4452eb",
 		filter: val => (val / 4095) * 360,
@@ -120,43 +120,18 @@ export let variables = [
 
 export let tuningManoeuvres = [
 	{
-		name: "Polarity Detection",
+		name: "Basic Tuning",
 		value: 1,
 		disabled: false
 	},
 	{
-		name: "Zeroing",
+		name: "Encoder Calibration",
 		value: 2,
 		disabled: false
-	},
-	{
-		name: "Polarity Check",
-		value: 4,
-		disabled: false
-	},
-	{
-		name: "Control Check",
-		value: 8,
-		disabled: true
-	},
-	{
-		name: "Encoder Steps Check",
-		value: 16,
-		disabled: true
-	},
-	{
-		name: "Continuous Phase Increase",
-		value: 32,
-		disabled: true
 	},
 	{
 		name: "Step Manoeuvre",
 		value: 64,
 		disabled: false
 	},
-	{
-		name: "Ziegler Nichols Manoeuvre",
-		value: 128,
-		disabled: true
-	}
 ]

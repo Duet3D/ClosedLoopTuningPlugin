@@ -5,10 +5,15 @@
       Data Files
       <v-spacer></v-spacer>
       <v-icon class="ml-2" @click="refresh">mdi-refresh</v-icon>
+      <v-icon class="ml-2" @click="deletePage">mdi-delete</v-icon>
     </v-card-title>
 
     <v-card-text class="pb-0">
       <v-list dense :v-if="!this.loading">
+        <div v-if="this.files.length > 200" class="w-full error--text text-center mb-3">
+          Warning: You have {{ this.files.length }} data files<br>
+          You may wish to delete some to save space
+        </div>
         <v-list-item-group
           v-model="selectedIndex"
           color="primary"
@@ -19,7 +24,12 @@
             :value="index"
           >
             <v-list-item-content>
-              <v-list-item-title v-text="file.name"></v-list-item-title>
+              <v-list-item-title>
+                <div class="mt-1 float-left">
+                  {{ file.name }}
+                </div>
+                <v-icon class="ml-2 float-right" @click.stop="deleteFile(file.name)">mdi-delete</v-icon>
+              </v-list-item-title>
             </v-list-item-content>
           </v-list-item>
         </v-list-item-group>
@@ -43,6 +53,7 @@
 <script>
 'use strict'
 
+import Path from '../../utils/path.js'
 import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
@@ -64,7 +75,7 @@ export default {
     this.refresh();
   },
 	methods: {
-    ...mapActions('machine', ['getFileList']),
+    ...mapActions('machine', {getFileList: 'getFileList', machineDelete: 'delete'}),
 		async refresh() {
 			if (!this.isConnected) {
 				this.selectedIndex = -1;
@@ -92,6 +103,25 @@ export default {
       this.page = 1;
       this.selectedIndex = 0;
     },
+    async deleteFile(fileName) {
+      try {
+        await this.machineDelete(Path.combine(this.closedLoopDirectory, fileName));
+        this.refresh();
+      } catch (e) {
+        this.$makeNotification('error', this.$t('notification.delete.errorTitle', [fileName]), e.message);
+      }
+    },
+    async deletePage() {
+      for (var i=(this.page-1)*this.maxFileDisplay; i<this.page * this.maxFileDisplay; i++) {
+        if (i >= this.files.length) {continue;}
+        try {
+          await this.machineDelete(Path.combine(this.closedLoopDirectory, this.files[i].name));
+        } catch (e) {
+          this.$makeNotification('error', this.$t('notification.delete.errorTitle', [this.files[i].name]), e.message);
+        }
+      }
+      this.refresh();
+    }
 	},
   watch: {
     selectedIndex() {
