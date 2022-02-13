@@ -40,6 +40,7 @@ new DwcPlugin({
 
 If you wish to develop on the plugin, run `npm run serve` in the DWC directory and open the resulting build in your browser. You can then navigate to Settings > General > Built-in Plugins and click 'start' to run the plugin. Any changes made in `/src/plugins/ClosedLoopTuning` will then be hot-reloaded and reflected live in the browser.
 
-Once you have finished developing, or if you just wish to compile from source, run `npm run build` in the DWC directory. This will generate the `/dist` directory within DWC. Copy all the files that start `ClosedLoopTuning....js` from `/dist/js` in **DWC** into the `dist/dwc` folder in **this** repository. Repeat and copy all the files from DWC's `/dist/css` that start `ClosedLoopTuning....css` into this repositories `/dist/dwc` directory.
+## Building as an external plugin
 
-Finally, compress the contents of this repositories `dist` folder into a zip file (such that `plugin.json` is at the top level of the zip folder). The resulting zip folder is the compiled plugin that can be uploaded to DWC as described in 'Getting Started'.
+Once you have finished developing, or if you just wish to compile from source, run `npm run build-plugin ../Closed-Loop-Plugin` in the DWC directory where `../Closed-Loo-Plugin` points to this directory.
+This will generate a ZIP file in the `dist` directory within DWC that can be uploaded as a plugin.

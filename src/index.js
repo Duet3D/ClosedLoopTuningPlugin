@@ -1,13 +1,13 @@
 'use strict'
 
-import { registerRoute } from '../../routes'
+import { registerRoute } from '@/routes'
 
 import ClosedLoopTuning from './ClosedLoopTuning.vue'
 
-// Register a route via Settings -> Object Model
+// Register a route via Settings -> Closed Loop
 registerRoute(ClosedLoopTuning, {
 	Settings: {
-		ObjectModel: {
+		ClosedLoopTuning: {
 			icon: 'mdi-chart-bell-curve-cumulative',
 			caption: 'Closed Loop',
 			path: '/ClosedLoopTuning'

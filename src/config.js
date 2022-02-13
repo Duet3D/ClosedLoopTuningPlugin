@@ -18,7 +18,7 @@ export let yAxes = [
 		id: 'unitless',
 		type: 'linear',
 		position: 'right',
-	},
+	}
 ];
 
 export let variables = [

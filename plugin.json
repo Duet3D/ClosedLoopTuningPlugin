@@ -2,7 +2,8 @@
     "id": "ClosedLoopTuning",
     "name": "Closed Loop Tuning",
     "author": "Louis Irwin",
-    "version": "0.3-alpha",
+    "version": "auto",
+  	"dwcVersion": "auto",
     "license": "MIT",
     "homepage": "https://duet3d.com"
 }

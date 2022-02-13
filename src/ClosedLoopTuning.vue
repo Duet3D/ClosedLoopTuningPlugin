@@ -4,7 +4,7 @@
 			<v-col cols="12">
 				<Recorder
 					:recordingProgress="-1"
-					@recordingfinished="recordingFinished"
+					@recordingFinished="recordingFinished"
 				/>
 			</v-col>
 		</v-row>
@@ -67,18 +67,20 @@ export default {
 			inputText = inputText.split("\n");
 			const header = inputText[0].split(",");
 			let data = {};
-			for (var variable of header) {
+			for (let variable of header) {
 				data[variable] = [];
 			}
 			inputText.slice(1).forEach(row => {
-				if (row=="") {return;}
+				if (row === "") {
+					return;
+				}
 				row = row.split(",");
-				for (var i=0; i<row.length; i++) {
+				for (let i = 0; i < row.length; i++) {
 					data[Object.keys(data)[i]].push(parseFloat(row[i]));
 				}
 			});
 			return data;
-    },
+		},
 		async selected(file) {
 			if (!file) {
 				this.loadedData = null;
@@ -91,7 +93,7 @@ export default {
 					showError: false
 				}));
 
-				this.availableVariables = Object.keys(data).filter(x => x != "Sample");
+				this.availableVariables = Object.keys(data).filter(x => x !== "Sample");
 				this.loadedData = data;
 			}
 		},
