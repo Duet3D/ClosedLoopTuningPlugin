@@ -1,6 +1,6 @@
 # Closed Loop Tuning Plugin
 
-*Visualise the performance of your [1HCL closed loop controller board](https://duet3d.dozuki.com/Wiki/Duet_3_Expansion_1HCL).*
+*Visualise the performance of your [1HCL closed loop controller board](https://docs.duet3d.com/Duet3D_hardware/Duet_3_family/Duet_3_Expansion_1HCL).*
 
 
 ![Image of the plugin UI](https://repository-images.githubusercontent.com/392753893/06488b0a-3573-45ae-a2c7-0017f91d7f48)
@@ -15,7 +15,7 @@ To install the plugin into Duet Web Control (DWC):
 4. Navigate to Setting > Machine Specific > Machine Specific Plugins and click the 'Start' button
 5. A 'closed loop' option should appear in the left sidebar - you're ready to start tuning!
 
-*Please note that DWC 3.3.0 is the minimum supported version of DWC. If you have difficulty following the above instructions, or if the plugin does not work as expected, please ensure you have [updated to the latest version of DWC](https://duet3d.dozuki.com/Wiki/Installing_and_Updating_Firmware).*
+*Please note that DWC 3.3.0 is the minimum supported version of DWC. If you have difficulty following the above instructions, or if the plugin does not work as expected, please ensure you have [updated to the latest version of DWC](https://docs.duet3d.com/User_manual/RepRapFirmware/Updating_firmware).*
 
 ## Contributing and Compiling from source
 
