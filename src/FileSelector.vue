@@ -34,7 +34,6 @@
 					</v-list-item>
 				</v-list-item-group>
 			</v-list>
-
 		</v-card-text>
 
 		<v-spacer/>
@@ -44,6 +43,7 @@
 				v-model="page"
 				:length="Math.ceil(files.length / maxFileDisplay)"
 				:total-visible="Math.ceil(files.length / maxFileDisplay) > 4 ? 5 : null"
+				class="mx-auto"
 			/>
 		</v-card-actions>
 	</v-card>
@@ -52,7 +52,7 @@
 <script>
 'use strict'
 
-import { mapState, mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
 
 import Path from '../../utils/path.js'
 
@@ -66,9 +66,6 @@ export default {
 	}),
 	computed: {
 		...mapGetters(['isConnected', 'uiFrozen']),
-		...mapState('machine/model', {
-			closedLoopDirectory: state => `${state.directories.system}/closed-loop/`
-		}),
 		displayedFiles() {
 			return this.files.slice((this.page - 1) * this.maxFileDisplay, (this.page) * this.maxFileDisplay);
 		}
@@ -96,7 +93,7 @@ export default {
 			this.selectedIndex = -1;
 			this.loading = true;
 			try {
-				this.files = (await this.getFileList(this.closedLoopDirectory))
+				this.files = (await this.getFileList(Path.closedLoop))
 								.filter(file => !file.isDirectory && file.name.endsWith('.csv'))
 								.sort((a, b) => b.lastModified - a.lastModified);
 			} finally {
@@ -110,7 +107,7 @@ export default {
 		},
 		async deleteFile(fileName) {
 			try {
-				await this.machineDelete(Path.combine(this.closedLoopDirectory, fileName));
+				await this.machineDelete(Path.combine(Path.closedLoop, fileName));
 				await this.refresh();
 			} catch (e) {
 				this.$makeNotification('error', this.$t('notification.delete.errorTitle', [fileName]), e.message);
@@ -123,7 +120,7 @@ export default {
 				}
 
 				try {
-					await this.machineDelete(Path.combine(this.closedLoopDirectory, this.files[i].name));
+					await this.machineDelete(Path.combine(Path.closedLoop, this.files[i].name));
 				} catch (e) {
 					this.$makeNotification('error', this.$t('notification.delete.errorTitle', [this.files[i].name]), e.message);
 				}
@@ -133,11 +130,7 @@ export default {
 	},
 	watch: {
 		selectedIndex(to) {
-			if (to >= 0 && to < this.files.length) {
-				this.$emit("fileSelect", this.closedLoopDirectory + this.files[to].name);
-			} else {
-				this.$emit("fileSelect", null);
-			}
+			this.$emit("fileSelect", (to >= 0 && to < this.files.length) ? Path.combine(Path.closedLoop, this.files[to].name) : null);
 		}
 	}
 }

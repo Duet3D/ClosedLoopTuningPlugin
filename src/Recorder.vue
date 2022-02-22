@@ -22,7 +22,7 @@
 				<v-col cols="3">
 					<v-select
 						v-model="selectedDriver"
-						:items="availableAxes"
+						:items="drivers"
 						hint="Axes with > 1 drive will not show."
 						item-text="name"
 						item-value="value"
@@ -220,7 +220,8 @@ export default {
 				return;
 			}
 
-			const reply = await this.sendCode({ code: this.GCODECommand, fromInput: false });
+			const gcodeToSend = (this.calibrationMovement === 0) ? (this.GCODECommand + '\n' + this.customGCODE) : this.GCODECommand;
+			const reply = await this.sendCode({ code: gcodeToSend, fromInput: false });
 			if (reply.startsWith('Error: ')) {
 				this.error = reply;
 				return;
@@ -228,46 +229,44 @@ export default {
 				this.warning = reply;
 			}
 
-			if (this.calibrationMovement === 0) {
-				const reply = await this.sendCode({ code: this.customGCODE, fromInput: false });
-				if (reply.startsWith('Error: ')) {
-					this.error = reply;
-					return;
-				} else if (reply.startsWith('Warning: ')) {
-					this.warning = reply;
-				}
-			}
-
 			this.error = null;
 			this.warning = null;
 			this.recordingProgress = -1;
-
-			// Keep asking the firmware for data collection progress
-			// TODO: Do this using the object model!
-			const interval = setInterval(async () => {
-				const reply = await this.sendCode({ code: `M569.5 P${this.selectedDriver}`, fromInput: false, log: false });
-				if (reply.startsWith('Warning: M569.5: Closed loop data is not being collected')) {
-					this.recordingProgress = null;
-					this.$emit("recordingFinished");
-					clearInterval(interval);
-				} else if (reply.startsWith('Collecting sample:')) {
-					let progress = reply.split(":")[1].split("/");
-					this.recordingProgress = (parseInt(progress[0]) / parseInt(progress[1])) * 100;
-				}
-			}, 750);
 		}
 	},
 	computed: {
 		...mapState('machine/model', {
+			boards: state => state.boards,
 			axes: state => state.move.axes
 		}),
-		availableAxes() {
+		drivers() {
 			return this.axes
-				.filter(axis => axis.drivers.length === 1)
+				.filter(axis => axis && axis.drivers.length === 1 && axis.drivers[0])
+				.filter(axis => this.boards.some(board => board && board.canAddress === parseInt(axis.drivers[0].split('.')[0]) && board.closedLoop !== null))
 				.map(axis => ({
 					name: `${axis.letter} axis (driver ${axis.drivers[0]})`,
 					value: axis.drivers[0]
 				}));
+		},
+		closedLoopPoints() {
+			if (this.selectedDriver) {
+				const canAddress = parseInt(this.selectedDriver.split('.')[0]);
+				const board = this.boards.find(board => board.canAddress === canAddress);
+				if (board && board.closedLoop) {
+					return board.closedLoop.points;
+				}
+			}
+			return null;
+		},
+		closedLoopRuns() {
+			if (this.selectedDriver) {
+				const canAddress = parseInt(this.selectedDriver.split('.')[0]);
+				const board = this.boards.find(board => board.canAddress === canAddress);
+				if (board && board.closedLoop) {
+					return board.closedLoop.runs;
+				}
+			}
+			return null;
 		},
 		totalTime() {
 			return Math.round((this.sampleCount / this.sampleRate) * 100) / 100;
@@ -282,12 +281,23 @@ export default {
 			return `M569.5 ${pString} ${sString} ${aString} ${rString} ${dString} ${vString}`;
 		},
 		ready() {
-			return this.selectedDriver != null && this.selectedVariables.length > 0;
+			return this.selectedDriver !== null && this.selectedVariables.length > 0;
 		},
 	},
 	watch: {
 		calibrationMovement() {
 			this.activateMode = 0;
+		},
+		closedLoopPoints(to) {
+			if (this.recordingProgress !== null) {
+				this.recordingProgress = (to / this.sampleCount) * 100;
+			}
+		},
+		closedLoopRuns(to) {
+			if (this.recordingProgress !== null) {
+				this.recordingProgress = null;
+				this.$emit("recordingFinished");
+			}
 		}
 	}
 }

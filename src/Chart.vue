@@ -1,11 +1,9 @@
-<style>
-.chartjs-size-monitor {
-	position: relative !important;
-}
-</style>
-
 <style scoped>
-canvas {
+.content > div:last-child {
+	position: relative;
+}
+
+.content > div:last-child > canvas {
 	position: absolute;
 }
 </style>
@@ -63,9 +61,21 @@ export default {
 		createChart() {
 			this.chart = new Chart.Line(this.$refs.chart, {
 				options: {
-					animation: {duration: 0},
+					animation: {
+						duration: 0
+					},
 					maintainAspectRatio: false,
-					scales: {xAxes: [{type: 'linear', scaleLabel: {display: true, labelString: "Time Since Start (ms)"}}]}
+					scales: {
+						xAxes: [
+							{
+								type: 'linear',
+								scaleLabel: {
+									display: true,
+									labelString: "Time Since Start (ms)"
+								}
+							}
+						]
+					}
 				},
 				data: {
 					datasets: []
@@ -76,9 +86,9 @@ export default {
 		updateChart() {
 			if (this.data) {
 				this.chart.data.datasets = this.variables.map(variable => ({
-					yAxisID: variable.axis,
-					label: variable.title,
-					data: this.data[variable.title] ? 
+					borderColor: variable.colour,
+					borderWidth: 1,
+					data: this.data[variable.title] ?
 						this.data[variable.title]
 							.map((val, idx) => ({
 								x: this.data.Timestamp[idx],
@@ -86,9 +96,12 @@ export default {
 							}))
 							.slice(this.rangeFilter[0], this.rangeFilter[1])
 						: [],
-					borderColor: variable.colour,
 					fill: false,
-					tension: 0
+					label: variable.title,
+					pointRadius: 0,
+					showLine: true,
+					tension: 0,
+					yAxisID: variable.axis
 				}));
 
 				const axesRequired = this.variables.map(x => x.axis);
