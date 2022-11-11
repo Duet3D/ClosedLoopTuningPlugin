@@ -102,9 +102,8 @@ export default class {
 
    async findP() {
       let solved = false;
-      let count = 0;
-
-      this.pTerm = 25; //Reset P to 100 as a start point
+      let currentTarget = 0;
+      this.pTerm = 20; //Reset P to 100 as a start point
       this.iTerm = 0;
       this.dTerm = 0;
       await this.updatePID();
@@ -118,42 +117,45 @@ export default class {
             return false;
          }
 
-         count++;
          //console.log(`P: ${this.pTerm}`);
          this.updateStatus(`Autotune: Testing P${this.pTerm}`);
          await this.updatePID();
          let data = await this.runStepManouver();
-         //console.log(data);
          let processedData = this.processData(data);
-         //console.log(processedData);
-
          let measurement = processedData.peaks[0].time;
-         //console.log(`Current Time Measurement = ${measurement} Time = ${peakTime}`);
+         //console.log(Math.abs(measurement - peakTime))
          if (measurement < peakTime && Math.abs(measurement - peakTime) > maxPTime) {
             peakTime = measurement;
-            this.pTerm += 25;
-
+            if(this.pTerm < 100) {
+            this.pTerm += 10;
+            }
+            else{
+               this.pTerm += 25;
+            }
+            currentTarget = this.pTerm;
             repeat = 0;
          } else {
             if (repeat < 1) {
                repeat++;
-               this.pTerm += 25; //Increase to see if there is a significant change
+               if(this.pTerm < 100) {
+                  this.pTerm += 10;
+                  }
+                  else{
+                     this.pTerm += 25;
+                  }
             } else {
                solved = true;
-               this.pTerm -= 50; //Use the last term that had the most significant change
+               this.pTerm = currentTarget; //Use the last term that had the most significant change
                await this.updatePID();
                this.updateStatus(`Autotune: P${this.pTerm} found`);
-               //console.log(`Solved ${this.pTerm}`);
             }
          }
-         //await this.sleep(500);
       }
       return solved;
    }
 
    async findD() {
       let solved = false;
-      let count = 0;
       this.iTerm = 0;
       this.dTerm = 0;
       while (!solved && this.dTerm < maxDTerm) {
@@ -167,7 +169,12 @@ export default class {
          var overshoots = processedData.peaks.filter((peak) => peak.step - processedData.stepTarget > 0.05);
 
          if (overshoots.length > 0) {
-            this.dTerm += 0.025;
+            if(this.dTerm < 0.5) {
+               this.dTerm += 0.01;
+            } else{
+               this.dTerm += 0.025;
+            }
+            
             this.dTerm = Number(this.dTerm.toPrecision(3));
          } else {
             return true;
@@ -180,7 +187,8 @@ export default class {
       let solved = false;
       let count = 0;
       let stableTime = 999999;
-      this.iTerm = 1000;
+      let currentTerm = 0;
+      this.iTerm = 1000; 
       while (!solved && this.iTerm < maxITerm) {
          if (this.cancelled) {
             return false;
@@ -191,20 +199,18 @@ export default class {
          let data = await this.runStepManouver(true);
          let processedData = this.processData(data);
          let unstableTimes = processedData.error.filter((p) => Math.abs(p.error) > 0);
-         //console.log(processedData)
-         //console.log(unstableTimes)
          let currentTime = unstableTimes[unstableTimes.length - 1].time; //get the last unstable time
-         //console.log(`${this.iTerm} Current Time Measurement = ${currentTime} Time = ${stableTime}`);
-         if (currentTime < stableTime - 10) {
+         if (currentTime < stableTime - 25) {
             stableTime = currentTime;
             this.iTerm += 1000;
+            currentTerm = this.iTerm;
             this.iTerm = Math.trunc(this.iTerm);
             count = 0;
          } else {
             count++;
             this.iTerm += 500;
             if (count > 1) {
-               this.iTerm -= 1000;
+               this.iTerm = currentTerm;
                await this.updatePID();
                solved = true;
                this.updateStatus(`Autotune: Testing I${this.iTerm}`);
