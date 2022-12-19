@@ -54,7 +54,7 @@
 
 import { mapGetters, mapActions } from 'vuex'
 
-import Path from '../../utils/path.js'
+import Path from '../../utils/path'
 
 export default {
 	data: () => ({
