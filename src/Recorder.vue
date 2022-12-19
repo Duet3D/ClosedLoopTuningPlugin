@@ -11,7 +11,7 @@
                <v-checkbox dense hide-details v-for="variable in nthThirdOfVariables(colNo)" :key="variable.id" v-model="selectedVariables" :label="variable.title" :value="variable" :color="darkTheme ? variable.colour.dark : variable.colour.light" />
             </v-col>
             <v-col cols="3">
-               <v-select v-model="selectedDriver" :items="drivers" hint="Axes with > 1 drive will not show." item-text="name" item-value="value" label="Select a driver" single-line persistent-hint class="pb-4" />
+               <v-select v-model="selectedDriver" :items="drivers" hint="Only one motor will be driven, axis should be re-homed after tuning" item-text="name" item-value="value" label="Select a driver" single-line persistent-hint class="pb-4" />
 
                <v-form @submit.prevent="updatePID" v-on:keyup.enter="updatePID">
                   <v-row>
@@ -263,13 +263,18 @@ export default {
       }),
       ...mapState('settings', ['darkTheme']),
       drivers() {
-         return this.axes
-            .filter((axis) => axis && axis.drivers.length === 1 && axis.drivers[0])
-            .filter((axis) => this.boards.some((board) => board && board.canAddress === parseInt(axis.drivers[0].board) && board.closedLoop !== null))
-            .map((axis) => ({
-               name: `${axis.letter} axis (driver ${axis.drivers[0]})`,
-               value: axis.drivers[0]
-            }));
+         let results = [];
+         this.axes.forEach(axis => {
+            axis.drivers.forEach(driver => {
+               if(this.boards.some(board => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
+                  results.push({
+                     name: `${axis.letter} axis (driver ${driver})`,
+                     value: driver
+                  })               
+               }
+            })
+         })
+         return results;
       },
       closedLoopPoints() {
          if (this.selectedDriver) {
