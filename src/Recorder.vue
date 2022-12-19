@@ -265,7 +265,7 @@ export default {
       drivers() {
          return this.axes
             .filter((axis) => axis && axis.drivers.length === 1 && axis.drivers[0])
-            .filter((axis) => this.boards.some((board) => board && board.canAddress === parseInt(axis.drivers[0].split('.')[0]) && board.closedLoop !== null))
+            .filter((axis) => this.boards.some((board) => board && board.canAddress === parseInt(axis.drivers[0].board) && board.closedLoop !== null))
             .map((axis) => ({
                name: `${axis.letter} axis (driver ${axis.drivers[0]})`,
                value: axis.drivers[0]
@@ -273,7 +273,7 @@ export default {
       },
       closedLoopPoints() {
          if (this.selectedDriver) {
-            const canAddress = parseInt(this.selectedDriver.split('.')[0]);
+            const canAddress = parseInt(this.selectedDriver.board);
             const board = this.boards.find((board) => board.canAddress === canAddress);
             if (board && board.closedLoop) {
                return board.closedLoop.points;
@@ -283,7 +283,7 @@ export default {
       },
       closedLoopRuns() {
          if (this.selectedDriver) {
-            const canAddress = parseInt(this.selectedDriver.split('.')[0]);
+            const canAddress = parseInt(this.selectedDriver.board);
             const board = this.boards.find((board) => board.canAddress === canAddress);
             if (board && board.closedLoop) {
                //console.log(`run complete`);

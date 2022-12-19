@@ -3,8 +3,8 @@
 
 'use strict';
 
-import Path from '@/utils/path.js';
-import CSV from '@/utils/csv.js';
+import Path from '@/utils/path.ts';
+import CSV from '@/utils/csv.ts';
 
 const maxPTerm = 500;
 const maxPTime = 0.5;
