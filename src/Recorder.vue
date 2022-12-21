@@ -180,28 +180,29 @@ export default {
          }
       },
       async record(force = false) {
-		this.recording= true;
-		try{
-         force |= this.dontShowModal;
-         if (this.calibrationMovement !== -1 && !force) {
-            this.showDialog = true;
-            return;
+         this.recording= true;
+         try{
+            force |= this.dontShowModal;
+            if (this.calibrationMovement !== -1 && !force) {
+               this.showDialog = true;
+               return;
+            }
+            const gcodeToSend = this.calibrationMovement === 0 ? this.GCODECommand + '\n' + this.customGCODE : this.GCODECommand;
+            this.recordingProgress = -1;
+            const reply = await this.sendCode({ code: gcodeToSend, fromInput: false });
+            console.log('Response', reply)
+            if (reply.startsWith('Error: ')) {
+               this.error = reply;
+               return;
+            } else if (reply.startsWith('Warning: ')) {
+               this.warning = reply;
+            }
+            this.error = null;
+            this.warning = null;
          }
-         const gcodeToSend = this.calibrationMovement === 0 ? this.GCODECommand + '\n' + this.customGCODE : this.GCODECommand;
-		 this.recordingProgress = -1;
-         const reply = await this.sendCode({ code: gcodeToSend, fromInput: false });
-         if (reply.startsWith('Error: ')) {
-            this.error = reply;
-            return;
-         } else if (reply.startsWith('Warning: ')) {
-            this.warning = reply;
+         finally {
+            await setTimeout(() => {this.recording = false;}, 1000);
          }
-         this.error = null;
-         this.warning = null;
-		}
-		finally {
-		await setTimeout(() => {this.recording = false;}, 1000);
-		}
       },
 	  checkTerm(term){
 		return term != '' && term >= 0
@@ -276,8 +277,8 @@ export default {
       },
       closedLoopPoints() {
          if (this.selectedDriver) {
-            const canAddress = parseInt(this.selectedDriver.board);
-            const board = this.boards.find((board) => board.canAddress === canAddress);
+            const canAddress = this.selectedDriver.split('.')[0]
+            const board = this.boards.find((board) => board.canAddress == canAddress);
             if (board && board.closedLoop) {
                return board.closedLoop.points;
             }
@@ -286,10 +287,10 @@ export default {
       },
       closedLoopRuns() {
          if (this.selectedDriver) {
-            const canAddress = parseInt(this.selectedDriver.board);
-            const board = this.boards.find((board) => board.canAddress === canAddress);
+            const canAddress = this.selectedDriver.split('.')[0]
+            const board = this.boards.find((board) => board.canAddress == canAddress);
             if (board && board.closedLoop) {
-               //console.log(`run complete`);
+               console.log(`run complete`);
                return board.closedLoop.runs;
             }
          }
@@ -333,13 +334,15 @@ export default {
          this.activateMode = 0;
       },
       closedLoopPoints(to) {
+         console.log(to)
          if (this.recordingProgress !== null) {
             this.recordingProgress = (to / this.sampleCount) * 100;
          }
       },
       closedLoopRuns() {
-            this.recordingProgress = null;
-            this.$emit('recordingFinished');
+         console.log("runs")
+         this.recordingProgress = null;
+         this.$emit('recordingFinished');
       }
    }
 };
