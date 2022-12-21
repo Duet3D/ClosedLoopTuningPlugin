@@ -209,10 +209,8 @@ export default {
       async updatePID() {
          if ( this.checkTerm(this.pTerm)  && this.checkTerm(this.iTerm) && this.checkTerm(this.dTerm)) {
             try {
-               console.log(this.selectedDriver);
                this.updatingPIDValue = true;
                await this.sendCode({ code: `M569.1 P${this.selectedDriver}  R${this.pTerm} I${this.iTerm} D${this.dTerm}`, log: true });
-               console.log(await this.sendCode(`M569.1 P${this.selectedDriver}`));
             } finally {
                this.updatingPIDValue = false;
             }
@@ -268,8 +266,8 @@ export default {
             axis.drivers.forEach(driver => {
                if(this.boards.some(board => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
                   results.push({
-                     name: `${axis.letter} axis (driver ${driver})`,
-                     value: driver
+                     name: `${axis.letter} axis (driver ${driver.board}.${driver.driver})`,
+                     value: `${driver.board}.${driver.driver}`
                   })               
                }
             })
@@ -317,13 +315,10 @@ export default {
       async selectedDriver(to) {
          if (to) {
             try {
-               console.log(to);
                this.pTerm = 0;
                this.iTerm = 0;
                this.dTerm = 0;
-               console.log(`M569.1 P${to}`);
                var queryResults = await this.sendCode({ code: `M569.1 P${to}`, log: false, fromInput: false });
-               console.log(queryResults);
                if (queryResults) {
                   this.pTerm = queryResults.match(/P=[0-9.]+/)[0].substring(2);
                   this.iTerm = queryResults.match(/I=[0-9.]+/)[0].substring(2);
