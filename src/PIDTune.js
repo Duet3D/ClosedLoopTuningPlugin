@@ -7,7 +7,7 @@ import Path from '@/utils/path.ts';
 import CSV from '@/utils/csv.ts';
 
 const maxPTerm = 500;
-const maxPTime = 0.5;
+const maxPTime = 4;
 const maxDTerm = 0.4;
 const maxITerm = 50000;
 
@@ -16,6 +16,10 @@ export default class {
       this.pTerm = 100;
       this.iTerm = 0;
       this.dTerm = 0;
+      this.aTerm = 0;
+      this.vTerm = 0;
+      this.warningValue = 0;
+      this.errorValue = 0;
       this.selectedDriver = driver;
       this.sendCode = sendCode;
       this.getFileList = getFileList;
@@ -30,16 +34,29 @@ export default class {
    }
 
    async getPID() {
-      var queryResults = await this.sendCode({ code: `M569.1 P${this.selectedDriver}`, log: false, fromInput: false });
+      const queryResults = await this.sendCode({ code: `M569.1 P${this.selectedDriver}`, log: false, fromInput: false });
       if (queryResults) {
-         this.pTerm = queryResults.match(/P=[0-9.]+/)[0].substring(2);
-         this.iTerm = queryResults.match(/I=[0-9.]+/)[0].substring(2);
-         this.dTerm = queryResults.match(/D=[0-9.]+/)[0].substring(2);
+         this.pTerm = Number(queryResults.match(/P=[0-9.]+/)[0].substring(2));
+         this.iTerm = Number(queryResults.match(/I=[0-9.]+/)[0].substring(2));
+         this.dTerm = Number(queryResults.match(/D=[0-9.]+/)[0].substring(2));
+         this.aTerm = Number(queryResults.match(/A=[0-9.]+/)[0].substring(2));
+         this.vTerm = Number(queryResults.match(/V=[0-9.]+/)[0].substring(2));
+         
+         const match = /Warning\/error threshold ([0-9.]+)\/([0-9.]+)/g.exec(queryResults);
+         this.warningValue = Number(match[1]);
+         this.errorValue = Number(match[2]);
       }
    }
+   
 
    async updatePID() {
-      await this.sendCode({ code: `M569.1 P${this.selectedDriver}  R${this.pTerm} I${this.iTerm} D${this.dTerm}`, log: false });
+      let code = `M569.1 P${this.selectedDriver} R${this.pTerm} I${this.iTerm} D${this.dTerm} E0:0`
+      await this.sendCode({ code: code, log: false });
+      await this.sendCode({ code: `M569.1 P${this.selectedDriver}`, log: false });
+   }
+
+   async resetErrorThreshold() {
+      await this.sendCode({ code: `M569.1 P${this.selectedDriver} E${this.warningValue}:${this.errorValue}`, log: false });
    }
 
    sleep(ms) {
@@ -57,14 +74,10 @@ export default class {
 
       while (!solved && count < 10) {
          count++;
-         //console.log(`P: ${this.pTerm}`);
          let data = await this.runStepManouver();
-         //console.log(data);
          let processedData = this.processData(data);
-         //console.log(processedData);
 
          if (processedData.periods.length < 8) {
-            //console.log(`Not enough oscillations`);
             this.pTerm += 50;
             this.iTerm = 0;
             this.dTerm = 0;
@@ -74,20 +87,15 @@ export default class {
             let avg = processedData.periods.slice(1, 7).reduce((a, b) => a + b, 0) / 6;
             let under = processedData.periods.slice(1, 7).filter((period) => period < avg * 0.95);
             let over = processedData.periods.slice(1, 7).filter((period) => period > avg * 1.05);
-            //console.log(avg)
-            //console.log(`Over: ${over} Under: ${under}`);
             if (under.length > 1) {
                this.pTerm += 50;
                await this.updatePID();
-               //console.log(`Increasing P ${this.pTerm}`);
             }
             //Oscillations are too close
             else if (over.length > 1) {
                this.pTerm -= 25;
                await this.updatePID();
-               //console.log(`Decreasing P ${this.pTerm}`);
             } else {
-               console.log('solved');
                solved = true;
             }
          }
@@ -117,13 +125,11 @@ export default class {
             return false;
          }
 
-         //console.log(`P: ${this.pTerm}`);
          this.updateStatus(`Autotune: Testing P${this.pTerm}`);
          await this.updatePID();
          let data = await this.runStepManouver();
          let processedData = this.processData(data);
          let measurement = processedData.peaks[0].time;
-         //console.log(Math.abs(measurement - peakTime))
          if (measurement < peakTime && Math.abs(measurement - peakTime) > maxPTime) {
             peakTime = measurement;
             if(this.pTerm < 100) {
@@ -177,10 +183,11 @@ export default class {
             
             this.dTerm = Number(this.dTerm.toPrecision(3));
          } else {
-            return true;
+            solved = true;
          }
-         await this.sleep(500);
+         await this.sleep(1000);
       }
+      return solved;
    }
 
    async findI() {
@@ -216,9 +223,9 @@ export default class {
                this.updateStatus(`Autotune: Testing I${this.iTerm}`);
             }
          }
-         //console.log('sleep');
-         await this.sleep(1000);
+         await this.sleep(2000);
       }
+      return solved;
    }
 
    processData(csv) {
@@ -233,8 +240,11 @@ export default class {
       let stepTarget = 0;
       let rising = true;
 
+      let initialOffset = csv.data.content[0][csv.measuredIndex] - csv.data.content[0][csv.targetIndex] ;
+
       for (let idx = 0; idx < csv.data.content.length - 1; idx++) {
          let current = csv.data.content[idx];
+         current[csv.targetIndex] -= initialOffset;
          let next = csv.data.content[idx + 1];
 
          stepTarget = current[csv.targetIndex] > stepTarget ? current[csv.targetIndex] : stepTarget;
@@ -280,8 +290,8 @@ export default class {
          await this.sendCode({ code: `M569.5 P${this.selectedDriver} S500 A0 R250 D6 V64`, log: true });
          await this.sleep(2500);
       } else {
-         await this.sendCode({ code: `M569.5 P${this.selectedDriver} S1000 A0 R0 D6 V64`, log: true }); //Measure + Target = 6   Current Error = 8
-         await this.sleep(1500);
+         await this.sendCode({ code: `M569.5 P${this.selectedDriver} S1000 A0 R2000 D6 V64`, log: true }); //Measure + Target = 6   Current Error = 8
+         await this.sleep(2500);
       }
       
       let files = (await this.getFileList(Path.closedLoop)).filter((file) => !file.isDirectory && file.name.endsWith('.csv')).sort((a, b) => b.lastModified - a.lastModified);
@@ -306,10 +316,12 @@ export default class {
       if (success) {
          success = await this.findD();
       }
-      
       if (success) {
          success = await this.findI();
       }
+           
+      await this.resetErrorThreshold();
+
       await this.sendCode({ code: `M117 ${this.selectedDriver}: Tuning Complete `, log: true });
       this.updateStatus('');
       return true;

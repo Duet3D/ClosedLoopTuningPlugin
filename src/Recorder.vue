@@ -14,22 +14,27 @@
                <v-select v-model="selectedDriver" :items="drivers" hint="Only one motor will be driven, axis should be re-homed after tuning" item-text="name" item-value="value" label="Select a driver" single-line persistent-hint class="pb-4" />
 
                <v-form @submit.prevent="updatePID" v-on:keyup.enter="updatePID">
-                  <v-row>
-                     <v-col>
+                  <v-row dense>
+                     <v-col cols="4">
                         <v-text-field label="P Value" numeric v-model="pTerm"></v-text-field>
                      </v-col>
-                     <v-col>
+                     <v-col cols="4">
                         <v-text-field label="I Value" numeric v-model="iTerm"></v-text-field>
                      </v-col>
-                     <v-col>
+                     <v-col cols="4">
                         <v-text-field label="D Value" numeric v-model="dTerm"></v-text-field>
                      </v-col>
-                     <v-col>
+                     <v-col cols="4">
+                        <v-text-field label="A Value" numeric v-model="aTerm"></v-text-field>
+                     </v-col>
+                     <v-col cols="4">
+                        <v-text-field label="V Value" numeric v-model="vTerm"></v-text-field>
+                     </v-col>                     
+                     <v-col cols="4">
                         <v-btn type="submit" :loading="updatingPIDValue">Update</v-btn>
                      </v-col>
                   </v-row>
                </v-form>
-
                <v-row>
                   <v-col cols="6">
                      <v-text-field label="Samples to collect" v-model="sampleCount" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
@@ -49,17 +54,6 @@
                      </v-radio-group>
                   </v-col>
                </v-row>
-               <v-select
-                  :items="[
-                     { text: 'Immediately', value: 0 },
-                     { text: 'On next move', value: 1 }
-                  ]"
-                  label="Collect data"
-                  v-model="activateMode"
-                  :disabled="calibrationMovement > 0"
-                  :hint="calibrationMovement > 0 ? 'Only immediate collection is supported when a tuning move is selected.' : ''"
-                  persistent-hint
-               ></v-select>
             </v-col>
             <v-col cols="3">
                <v-radio-group class="mt-0 pt-0" label="Movement" v-model="calibrationMovement">
@@ -72,6 +66,17 @@
                      </template>
                   </v-radio>
                </v-radio-group>
+               <v-select
+                  :items="[
+                     { text: 'Immediately', value: 0 },
+                     { text: 'On next move', value: 1 }
+                  ]"
+                  label="Collect data"
+                  v-model="activateMode"
+                  :disabled="calibrationMovement > 0"
+                  :hint="calibrationMovement > 0 ? 'Only immediate collection is supported when a tuning move is selected.' : ''"
+                  persistent-hint
+               ></v-select>               
             </v-col>
          </v-row>
          <v-row>
@@ -161,6 +166,8 @@ export default {
       pTerm: 0,
       iTerm: 0,
       dTerm: 0,
+      aTerm: 0,
+      vTerm: 0,
       updatingPIDValue: false,
       autoTuning: false,
       autoTuner: null,
@@ -190,7 +197,6 @@ export default {
             const gcodeToSend = this.calibrationMovement === 0 ? this.GCODECommand + '\n' + this.customGCODE : this.GCODECommand;
             this.recordingProgress = -1;
             const reply = await this.sendCode({ code: gcodeToSend, fromInput: false });
-            console.log('Response', reply)
             if (reply.startsWith('Error: ')) {
                this.error = reply;
                return;
@@ -211,7 +217,7 @@ export default {
          if ( this.checkTerm(this.pTerm)  && this.checkTerm(this.iTerm) && this.checkTerm(this.dTerm)) {
             try {
                this.updatingPIDValue = true;
-               await this.sendCode({ code: `M569.1 P${this.selectedDriver}  R${this.pTerm} I${this.iTerm} D${this.dTerm}`, log: true });
+               await this.sendCode({ code: `M569.1 P${this.selectedDriver}  R${this.pTerm} I${this.iTerm} D${this.dTerm} A${this.aTerm} V${this.vTerm}`, log: true });
             } finally {
                this.updatingPIDValue = false;
             }
@@ -224,7 +230,7 @@ export default {
          try {
 			this.error = null;
             this.autoTuning = true;
-            this.autoTuner = new PIDTune(this.sendCode, this.getFileList, this.download, this.selectedDriver, this.updateGraph,this.updateAutotuneText);
+            this.autoTuner = new PIDTune(this.sendCode, this.getFileList, this.download, this.selectedDriver, this.updateGraph, this.updateAutotuneText);
             await this.autoTuner.execute();
             this.pTerm = this.autoTuner.pTerm;
             this.iTerm = this.autoTuner.iTerm;
@@ -290,7 +296,6 @@ export default {
             const canAddress = this.selectedDriver.split('.')[0]
             const board = this.boards.find((board) => board.canAddress == canAddress);
             if (board && board.closedLoop) {
-               console.log(`run complete`);
                return board.closedLoop.runs;
             }
          }
@@ -319,11 +324,15 @@ export default {
                this.pTerm = 0;
                this.iTerm = 0;
                this.dTerm = 0;
+               this.aTerm = 0;
+               this.vTerm = 0;
                var queryResults = await this.sendCode({ code: `M569.1 P${to}`, log: false, fromInput: false });
                if (queryResults) {
                   this.pTerm = queryResults.match(/P=[0-9.]+/)[0].substring(2);
                   this.iTerm = queryResults.match(/I=[0-9.]+/)[0].substring(2);
                   this.dTerm = queryResults.match(/D=[0-9.]+/)[0].substring(2);
+                  this.aTerm = queryResults.match(/A=[0-9.]+/)[0].substring(2);
+                  this.vTerm = queryResults.match(/V=[0-9.]+/)[0].substring(2);                  
                }
             } catch (e) {
                console.log(e);
@@ -334,13 +343,11 @@ export default {
          this.activateMode = 0;
       },
       closedLoopPoints(to) {
-         console.log(to)
          if (this.recordingProgress !== null) {
             this.recordingProgress = (to / this.sampleCount) * 100;
          }
       },
       closedLoopRuns() {
-         console.log("runs")
          this.recordingProgress = null;
          this.$emit('recordingFinished');
       }
