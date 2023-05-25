@@ -177,8 +177,9 @@ export default {
    methods: {
       ...mapActions('machine', ['sendCode', 'getFileList', 'download']),
       nthThirdOfVariables(n) {
-         let thirdLength = Math.ceil(this.variables.length / 3);
-         return this.variables.slice(n * thirdLength, (n + 1) * thirdLength);
+         let filteredVariables = this.variables.filter(v => !v.hideRecord);
+         let thirdLength = Math.ceil(filteredVariables.length / 3);
+         return  filteredVariables.slice(n * thirdLength, (n + 1) * thirdLength);
       },
       dialogResult(res) {
          this.showDialog = false;

@@ -9,7 +9,7 @@
 			<v-checkbox
 				dense
 				hide-details
-				v-for="variable in variables"
+				v-for="variable in chartableVariables"
 				:key="variable.id"
 				v-model="selectedVariables"
 				:label="variable.title"
@@ -49,6 +49,9 @@ export default {
 	},
 	computed: {
 		...mapState('settings', ['darkTheme']),
+		chartableVariables() {
+			return this.variables.filter(variable => !variable.hideSelect);
+		}
 	},
 	watch: {
 		value() {

@@ -30,7 +30,18 @@ export let variables = [
 			light: "#b30000",
 			dark: "#e60049"
 		},
-		axis: "count"
+		axis: "count",
+	},
+	{
+		id: "currentAndTarget",
+		title: "Current and Target Position",
+		filterValue: 14,
+		colour: {
+			light: "#7c1158",
+			dark: "#0bb4ff"
+		},
+		axis: "steps",
+		hideSelect: true,
 	},
 	{
 		id: "currentMotorSteps",
@@ -40,8 +51,10 @@ export let variables = [
 			light: "#7c1158",
 			dark: "#0bb4ff"
 		},
-		axis: "steps"
+		axis: "steps",
+		hideRecord: true,
 	},
+
 	{
 		id: "targetMotorSteps",
 		title: "Target Motor Steps",
@@ -50,7 +63,8 @@ export let variables = [
 			light: "#4421af",
 			dark: "#50e991"
 		},
-		axis: "steps"
+		axis: "steps",
+		hideRecord: true,
 	},
 	{
 		id: "currentError",
@@ -60,7 +74,8 @@ export let variables = [
 			light: "#1a53ff",
 			dark: "#e6d800"
 		},
-		axis: "steps"
+		axis: "steps",
+		hideRecord: true,
 	},
 	{
 		id: "pidControlSignal",
@@ -103,6 +118,26 @@ export let variables = [
 		axis: "unitless"
 	},
 	{
+		id: "pidVTerm",
+		title: "PID V Term",
+		filterValue: 1 << 13,
+		colour: {
+			light: "#ffa52a",
+			dark: "#0549a7"
+		},
+		axis: "unitless"
+	},
+	{
+		id: "pidATerm",
+		title: "PID A Term",
+		filterValue: 1 << 14,
+		colour: {
+			light: "#bf9004",
+			dark: "#8938c9"
+		},
+		axis: "unitless"
+	},	
+	{
 		id: "stepPhase",
 		title: "Measured Step Phase",
 		filterValue: 256,
@@ -136,6 +171,17 @@ export let variables = [
 		axis: "degrees"
 	},
 	{
+		id: "motorCurrents",
+		title: "Motor Currents",
+		filterValue: 6144,
+		colour: {
+			light: "#b2e061",
+			dark: "#b2e061"
+		},
+		axis: "unitless",
+		hideSelect: true,
+	},
+	{
 		id: "coilACurrent",
 		title: "Coil A Current",
 		filterValue: 2048,
@@ -143,7 +189,8 @@ export let variables = [
 			light: "#b2e061",
 			dark: "#b2e061"
 		},
-		axis: "unitless"
+		axis: "unitless",
+		hideRecord: true,
 	},
 	{
 		id: "coilBCurrent",
@@ -153,7 +200,8 @@ export let variables = [
 			light: "#bd7ebe",
 			dark: "#bd7ebe"
 		},
-		axis: "unitless"
+		axis: "unitless",
+		hideRecord: true,
 	}
 ];
 
