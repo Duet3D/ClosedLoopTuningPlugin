@@ -45,6 +45,7 @@
 import Chart from 'chart.js'
 
 import { yAxes } from './config.js'
+import { mapState } from 'vuex'
 
 export default {
 	data() {
@@ -57,12 +58,25 @@ export default {
 		data: Object,
 		variables: Array,
 	},
+	computed: {
+		...mapState('settings', ['darkTheme']),
+	},
 	methods: {
 		createChart() {
+
+			Chart.Tooltip.positioners.cursor = function(chartElements, coordinates) {
+		      return coordinates;
+    		};
+
 			this.chart = new Chart.Line(this.$refs.chart, {
 				options: {
 					animation: {
 						duration: 0
+					},
+					tooltips: {
+						mode: 'index',
+						position:'cursor',
+						intersect:false
 					},
 					maintainAspectRatio: false,
 					scales: {
@@ -79,14 +93,15 @@ export default {
 				},
 				data: {
 					datasets: []
-				}
+				},
 			});
+			
 			this.updateChart();
 		},
 		updateChart() {
 			if (this.data) {
 				this.chart.data.datasets = this.variables.map(variable => ({
-					borderColor: variable.colour,
+					borderColor: this.darkTheme ?  variable.colour.dark : variable.colour.light,
 					borderWidth: 1,
 					data: this.data[variable.title] ?
 						this.data[variable.title]
@@ -110,7 +125,6 @@ export default {
 				this.chart.data.datasets = [];
 				this.chart.options.scales.yAxes = [];
 			}
-
 			this.chart.update();
 		},
 	},
@@ -130,6 +144,9 @@ export default {
 			}
 		},
 		rangeFilter() {
+			this.updateChart();
+		},
+		darkTheme() {
 			this.updateChart();
 		}
 	}

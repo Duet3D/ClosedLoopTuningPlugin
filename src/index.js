@@ -6,7 +6,7 @@ import ClosedLoopTuning from './ClosedLoopTuning.vue'
 
 // Register a route via Settings -> Closed Loop
 registerRoute(ClosedLoopTuning, {
-	Settings: {
+	Plugins: {
 		ClosedLoopTuning: {
 			icon: 'mdi-chart-bell-curve-cumulative',
 			caption: 'Closed Loop',
