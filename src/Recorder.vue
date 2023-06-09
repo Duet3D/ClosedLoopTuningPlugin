@@ -12,7 +12,6 @@
             </v-col>
             <v-col cols="3">
                <v-select v-model="selectedDriver" :items="drivers" hint="Only one motor will be driven, axis should be re-homed after tuning" item-text="name" item-value="value" label="Select a driver" single-line persistent-hint class="pb-4" />
-
                <v-form @submit.prevent="updatePID" v-on:keyup.enter="updatePID">
                   <v-row dense>
                      <v-col cols="4">
@@ -29,7 +28,7 @@
                      </v-col>
                      <v-col cols="4">
                         <v-text-field label="V Value" numeric v-model="vTerm"></v-text-field>
-                     </v-col>                     
+                     </v-col>
                      <v-col cols="4">
                         <v-btn type="submit" :loading="updatingPIDValue">Update</v-btn>
                      </v-col>
@@ -57,15 +56,33 @@
             </v-col>
             <v-col cols="3">
                <v-radio-group class="mt-0 pt-0" label="Movement" v-model="calibrationMovement">
-                  <template v-for="manoeuvre in tuningManoeuvres">
-                     <v-radio v-if="!manoeuvre.disabled" :key="manoeuvre.value" :label="manoeuvre.name" :value="manoeuvre.value" :disabled="manoeuvre.disabled" dense hide-details />
-                  </template>
-                  <v-radio :value="0" hide-details>
-                     <template v-slot:label>
-                        <v-text-field label="Custom GCODE" v-model="customGCODE" />
-                     </template>
-                  </v-radio>
+                  <v-radio :value="64" label="Step Manoeuvre" dense hide-details> </v-radio>
+                  <v-row v-show="calibrationMovement === 64" dense>
+                     <v-col cols="12"> Step Manoeuvre Parameters </v-col>
+                     <v-col cols="6">
+                        <v-text-field label="Speed" persistent-hint v-model="moveSpeed" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
+                           <template #append> mm/s </template>
+                        </v-text-field>
+                     </v-col>
+                     <v-col cols="6">
+                        <v-text-field label="Distance" v-model="moveDistance" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
+                           <template #append> mm </template>
+                        </v-text-field>
+                     </v-col>
+                     <v-col cols="6">
+                        <v-text-field label="Acceleration" v-model="moveAcceleration" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
+                           <template #append> mm/s^2 </template>
+                        </v-text-field>
+                     </v-col>
+                  </v-row>
+                  <v-radio :value="0" hide-details label="Custom G-Code" />
+                  <v-row v-show="calibrationMovement === 0" dense >
+                     <v-col cols="12">
+                        <v-text-field  class="pt-1" label="G-Code" persistent-hint v-model="customGCODE" hint="Enter custom g-code to record" />
+                     </v-col>
+                  </v-row>
                </v-radio-group>
+
                <v-select
                   :items="[
                      { text: 'Immediately', value: 0 },
@@ -73,10 +90,7 @@
                   ]"
                   label="Collect data"
                   v-model="activateMode"
-                  :disabled="calibrationMovement > 0"
-                  :hint="calibrationMovement > 0 ? 'Only immediate collection is supported when a tuning move is selected.' : ''"
-                  persistent-hint
-               ></v-select>               
+               ></v-select>
             </v-col>
          </v-row>
          <v-row>
@@ -89,11 +103,11 @@
                   <v-icon>mdi-tune</v-icon>
                   <span class="ml-1">Auto Tune</span>
                </v-btn>
-               <v-btn  v-if="autoTuning" class="ml-1" @click="cancelAutoTune()" color="error">
+               <v-btn v-if="autoTuning" class="ml-1" @click="cancelAutoTune()" color="error">
                   <v-icon>mdi-tune</v-icon>
                   <span class="ml-1">Cancel</span>
                </v-btn>
-			   <div class="mt-1">{{autoTuneText}}</div>
+               <div class="mt-1">{{ autoTuneText }}</div>
             </v-col>
             <v-col cols="10">
                <div v-if="ready" :class="{ 'pt-2': !error && !warning && recordingProgress == null && calibrationMovement != 0 }" class="font-weight-black info--text">{{ GCODECommand }}</div>
@@ -112,7 +126,7 @@
             </v-card-title>
 
             <v-card-text>
-               You have chosen to perform a tuning manoeuvre which will move the axis a small distance.
+               You have chosen to perform a tuning manoeuvre which will move the axis.
                <div class="text-center py-2 font-weight-black error--text">This movement may not respect endstops.</div>
                Please ensure the axis is in a safe position (usually the center) before proceeding.
             </v-card-text>
@@ -143,7 +157,7 @@ import { mapState, mapActions } from 'vuex';
 
 import { variables, tuningManoeuvres } from './config.js';
 
-import PIDTune from './PIDTune.js';
+import PIDTune, { AxisParameters } from './PIDTune.js';
 // import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
@@ -171,15 +185,19 @@ export default {
       updatingPIDValue: false,
       autoTuning: false,
       autoTuner: null,
-	  recording: false,
-	  autoTuneText: ""
+      recording: false,
+      autoTuneText: '',
+      axisParams: null,
+      moveSpeed: 100,
+      moveDistance: 50,
+      moveAcceleration: 10000
    }),
    methods: {
       ...mapActions('machine', ['sendCode', 'getFileList', 'download']),
       nthThirdOfVariables(n) {
-         let filteredVariables = this.variables.filter(v => !v.hideRecord);
+         let filteredVariables = this.variables.filter((v) => !v.hideRecord);
          let thirdLength = Math.ceil(filteredVariables.length / 3);
-         return  filteredVariables.slice(n * thirdLength, (n + 1) * thirdLength);
+         return filteredVariables.slice(n * thirdLength, (n + 1) * thirdLength);
       },
       dialogResult(res) {
          this.showDialog = false;
@@ -188,14 +206,26 @@ export default {
          }
       },
       async record(force = false) {
-         this.recording= true;
-         try{
+         this.recording = true;
+
+         //Capture original acceleration
+         const originalAcceleration = this.axisParams.acceleration;
+
+         try {
             force |= this.dontShowModal;
             if (this.calibrationMovement !== -1 && !force) {
                this.showDialog = true;
                return;
             }
-            const gcodeToSend = this.calibrationMovement === 0 ? this.GCODECommand + '\n' + this.customGCODE : this.GCODECommand;
+
+            if (!this.customGCODE && this.calibrationMovement === 0) {
+               this.error = 'Enter a custom GCODE command before recording.';
+               return;
+            }
+
+            await this.sendCode({ code: `M201 ${this.axisParams.letter}${this.moveAcceleration}`, log: false });
+            console.log(this.stepCommand);
+            const gcodeToSend = this.calibrationMovement === 0 ? this.GCODECommand + '\n' + this.customGCODE : this.GCODECommand + '\n' + this.stepCommand();
             this.recordingProgress = -1;
             const reply = await this.sendCode({ code: gcodeToSend, fromInput: false });
             if (reply.startsWith('Error: ')) {
@@ -206,47 +236,53 @@ export default {
             }
             this.error = null;
             this.warning = null;
-         }
-         finally {
-            await setTimeout(() => {this.recording = false;}, 1000);
+         } finally {
+            //Reset original acceleration
+            await this.sendCode({ code: `M201 ${this.axisParams.letter}${originalAcceleration}`, log: false });
+            await setTimeout(() => {
+               this.recording = false;
+            }, 1000);
          }
       },
-	  checkTerm(term){
-		return term != '' && term >= 0
-	  },
+      stepCommand() {
+         return `G91 G1 H2 ${this.axisParams.letter}${this.moveDistance} F${this.moveSpeed * 60} \n G4 P100 \n G1 H2 ${this.axisParams.letter}-${this.moveDistance} F${this.moveSpeed * 60} G90`;
+      },
+      checkTerm(term) {
+         return term != '' && term >= 0;
+      },
       async updatePID() {
-         if ( this.checkTerm(this.pTerm)  && this.checkTerm(this.iTerm) && this.checkTerm(this.dTerm)) {
+         if (this.checkTerm(this.pTerm) && this.checkTerm(this.iTerm) && this.checkTerm(this.dTerm)) {
             try {
                this.updatingPIDValue = true;
                await this.sendCode({ code: `M569.1 P${this.selectedDriver}  R${this.pTerm} I${this.iTerm} D${this.dTerm} A${this.aTerm} V${this.vTerm}`, log: true });
             } finally {
                this.updatingPIDValue = false;
             }
+         } else {
+            console.log('error');
          }
-		 else{
-			console.log("error")
-		 }
       },
       async autoTune() {
          try {
-			this.error = null;
+            if (this.axisParams === null)
+               //JER put an error notice around this
+               return;
+            this.error = null;
             this.autoTuning = true;
-            this.autoTuner = new PIDTune(this.sendCode, this.getFileList, this.download, this.selectedDriver, this.updateGraph, this.updateAutotuneText);
+            this.autoTuner = new PIDTune(this.sendCode, this.getFileList, this.download, this.selectedDriver, this.updateGraph, this.updateAutotuneText, this.axisParams);
             await this.autoTuner.execute();
             this.pTerm = this.autoTuner.pTerm;
             this.iTerm = this.autoTuner.iTerm;
             this.dTerm = this.autoTuner.dTerm;
-         } 
-		 catch(ex){
-			console.error(ex)
-			this.error = ex;
-		 }
-		 finally {
+         } catch (ex) {
+            console.error(ex);
+            this.error = ex;
+         } finally {
             this.autoTuning = false;
          }
       },
       cancelAutoTune() {
-		 this.autoTuner.cancel();
+         this.autoTuner.cancel();
          this.autoTuning = false;
       },
       updateGraph(filename, p, i, d) {
@@ -255,12 +291,12 @@ export default {
          this.iTerm = i;
          this.dTerm = d;
       },
-	  updateAutotuneText(text){
-		this.autoTuneText = text;
-	  }
+      updateAutotuneText(text) {
+         this.autoTuneText = text;
+      }
    },
    unmounted() {
-	this.cancelAutoTune() 
+      this.cancelAutoTune();
    },
    computed: {
       ...mapState('machine/model', {
@@ -270,21 +306,21 @@ export default {
       ...mapState('settings', ['darkTheme']),
       drivers() {
          let results = [];
-         this.axes.forEach(axis => {
-            axis.drivers.forEach(driver => {
-               if(this.boards.some(board => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
+         this.axes.forEach((axis) => {
+            axis.drivers.forEach((driver) => {
+               if (this.boards.some((board) => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
                   results.push({
                      name: `${axis.letter} axis (driver ${driver.board}.${driver.driver})`,
                      value: `${driver.board}.${driver.driver}`
-                  })               
+                  });
                }
-            })
-         })
+            });
+         });
          return results;
       },
       closedLoopPoints() {
          if (this.selectedDriver) {
-            const canAddress = this.selectedDriver.split('.')[0]
+            const canAddress = this.selectedDriver.split('.')[0];
             const board = this.boards.find((board) => board.canAddress == canAddress);
             if (board && board.closedLoop) {
                return board.closedLoop.points;
@@ -294,7 +330,7 @@ export default {
       },
       closedLoopRuns() {
          if (this.selectedDriver) {
-            const canAddress = this.selectedDriver.split('.')[0]
+            const canAddress = this.selectedDriver.split('.')[0];
             const board = this.boards.find((board) => board.canAddress == canAddress);
             if (board && board.closedLoop) {
                return board.closedLoop.runs;
@@ -311,8 +347,8 @@ export default {
          const aString = `A${this.activateMode}`;
          const rString = `R${this.sampleRateContinuous ? 0 : this.sampleRate}`;
          const dString = `D${this.selectedVariables.reduce((acc, x) => acc + x.filterValue, 0)}`;
-         const vString = `V${this.calibrationMovement > 0 ? this.calibrationMovement : 0}`;
-         return `M569.5 ${pString} ${sString} ${aString} ${rString} ${dString} ${vString}`;
+         //const vString = `V${this.calibrationMovement > 0 ? this.calibrationMovement : 0}`;
+         return `M569.5 ${pString} ${sString} ${aString} ${rString} ${dString} V0`;
       },
       ready() {
          return this.selectedDriver !== null && this.selectedVariables.length > 0;
@@ -333,7 +369,16 @@ export default {
                   this.iTerm = queryResults.match(/I=[0-9.]+/)[0].substring(2);
                   this.dTerm = queryResults.match(/D=[0-9.]+/)[0].substring(2);
                   this.aTerm = queryResults.match(/A=[0-9.]+/)[0].substring(2);
-                  this.vTerm = queryResults.match(/V=[0-9.]+/)[0].substring(2);                  
+                  this.vTerm = queryResults.match(/V=[0-9.]+/)[0].substring(2);
+               }
+
+               let selectedAxis = this.axes.filter((axis) => axis.drivers.some((driver) => `${driver.board}.${driver.driver}` === this.selectedDriver));
+               if (selectedAxis.length > 0) {
+                  selectedAxis = selectedAxis[0];
+                  this.moveAcceleration = selectedAxis.acceleration;
+                  this.axisParams = new AxisParameters(selectedAxis.letter, selectedAxis.acceleration, selectedAxis.speed, selectedAxis.stepsPerMm, selectedAxis.microstepping.value);
+               } else {
+                  this.axisParams = null;
                }
             } catch (e) {
                console.log(e);

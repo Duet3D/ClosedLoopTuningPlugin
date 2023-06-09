@@ -11,8 +11,24 @@ const maxPTime = 4;
 const maxDTerm = 0.4;
 const maxITerm = 50000;
 
+export class AxisParameters {
+   constructor(letter, acceleration, maxSpeed, stepsPerMM, microstepping) {
+      this.letter = letter;
+      this.acceleration = acceleration;
+      this.maxSpeed = maxSpeed;
+      this.stepsPerMM = stepsPerMM;
+      this.microstepping = microstepping;
+   }
+
+/*
+G91 G1 H2 Xxx Fyyy G90
+Replace X in each command by the axis that the motor is assigned to. Value xx should be calculated so that the movement is 4 full steps. yyy should be the maximum allowed by M203. We may want to allow the M203 and M201 parameters to be temporarily overridden too. I am using M201 X10000 and M203 X50000 in testing.
+*/
+
+}
+
 export default class {
-   constructor(sendCode, getFileList, downloadFile, driver, updateGraphCallback, updateAutotuneTextCallback) {
+   constructor(sendCode, getFileList, downloadFile, driver, updateGraphCallback, updateAutotuneTextCallback, axisParams) {
       this.pTerm = 100;
       this.iTerm = 0;
       this.dTerm = 0;
@@ -27,6 +43,8 @@ export default class {
       this.updateGraphCallback = updateGraphCallback;
       this.updateAutotuneStatusCallback = updateAutotuneTextCallback;
       this.cancelled = false;
+      this.axisParams = axisParams;
+      this.lastFile = '';
    }
 
    cancel() {
@@ -111,7 +129,7 @@ export default class {
    async findP() {
       let solved = false;
       let currentTarget = 0;
-      this.pTerm = 20; //Reset P to 100 as a start point
+      this.pTerm = 10; //Reset P to 100 as a start point
       this.iTerm = 0;
       this.dTerm = 0;
       await this.updatePID();
@@ -287,11 +305,13 @@ export default class {
          return;
       }
       if (iTermTest) {
-         await this.sendCode({ code: `M569.5 P${this.selectedDriver} S500 A0 R250 D6 V64`, log: true });
-         await this.sleep(2500);
+         await this.sendCode({ code: `M569.5 P${this.selectedDriver} S500 R250 D6 A0`, log: true });
+         await this.sendCode({ code: this.generateFourFullStepsGCode(), log: true }); 
+         await this.sleep(3000);
       } else {
-         await this.sendCode({ code: `M569.5 P${this.selectedDriver} S1000 A0 R2000 D6 V64`, log: true }); //Measure + Target = 6   Current Error = 8
-         await this.sleep(2500);
+         await this.sendCode({ code: `M569.5 P${this.selectedDriver} S1000 R2000 D6 A0`, log: true }); //Measure + Target = 6   Current Error = 8
+         await this.sendCode({ code: this.generateFourFullStepsGCode(), log: true }); 
+         await this.sleep(3000);
       }
       
       let files = (await this.getFileList(Path.closedLoop)).filter((file) => !file.isDirectory && file.name.endsWith('.csv')).sort((a, b) => b.lastModified - a.lastModified);
@@ -302,6 +322,13 @@ export default class {
       if (this.updateGraphCallback !== null) {
          this.updateGraphCallback(`Path.closedLoop}/${files[0].name}`, this.pTerm, this.iTerm, this.dTerm);
       }
+
+      if (!files || files.length === 0  || this.lastFile === files[0].name) { 
+         throw new Error('No new data found')
+      }
+
+
+      this.lastFile = files[0].name;
 
       return this.fetchCSV(data);
    }
@@ -332,4 +359,18 @@ export default class {
          this.updateAutotuneStatusCallback(text);
       }
    }
+
+   getFullStep() {
+      return  1 / this.axisParams.stepsPerMM * this.axisParams.microstepping;
+   }
+
+   generateFourFullStepsGCode() {
+      const gcode = `G91 G1 H2 ${this.axisParams.letter}${this.getFullStep() * -16} F${this.axisParams.maxSpeed} G90`;
+      console.log(gcode);
+      return gcode;
+   }
+
+
+
+
 }
