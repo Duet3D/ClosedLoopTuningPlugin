@@ -29,7 +29,7 @@ Copy the following object into the `export default` array in DWC's `/src/plugins
 new DwcPlugin({
   id: 'ClosedLoopTuning',
   name: 'Closed Loop Tuning',
-  author: 'Louis Irwin',
+  author: 'Louis Irwin, Juan Rosario',
   version,
   loadDwcResources: () => import(
     /* webpackChunkName: "ClosedLoopTuning" */

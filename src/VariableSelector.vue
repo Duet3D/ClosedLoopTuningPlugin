@@ -9,13 +9,13 @@
 			<v-checkbox
 				dense
 				hide-details
-				v-for="variable in variables"
+				v-for="variable in chartableVariables"
 				:key="variable.id"
 				v-model="selectedVariables"
 				:label="variable.title"
 				:value="variable"
 				:disabled="!availableVariables.includes(variable.title)"
-				:color="variable.colour"
+				:color="darkTheme ?  variable.colour.dark : variable.colour.light"
 			/>
 		</v-card-text>
 
@@ -33,6 +33,7 @@
 'use strict'
 
 import { variables } from './config.js'
+import { mapState } from 'vuex'
 
 export default {
 	data: () => ({
@@ -45,6 +46,12 @@ export default {
 	},
 	mounted() {
 		this.selectedVariables = this.value;
+	},
+	computed: {
+		...mapState('settings', ['darkTheme']),
+		chartableVariables() {
+			return this.variables.filter(variable => !variable.hideSelect);
+		}
 	},
 	watch: {
 		value() {
