@@ -1,6 +1,6 @@
 # Closed Loop Tuning Plugin
 
-*Visualise the performance of your [1HCL closed loop controller board](https://docs.duet3d.com/Duet3D_hardware/Duet_3_family/Duet_3_Expansion_1HCL).*
+*Visualise the performance of your [1HCL closed loop controller board](https://docs.duet3d.com/Duet3D_hardware/Duet_3_family/Duet_3_Expansion_1HCL).* or [Motor23CL closed loop motor](https://docs.duet3d.com/en/Duet3D_hardware/Duet_3_family/Duet_3_Motor_23CL)
 
 
 ![Image of the plugin UI](https://repository-images.githubusercontent.com/392753893/06488b0a-3573-45ae-a2c7-0017f91d7f48)
