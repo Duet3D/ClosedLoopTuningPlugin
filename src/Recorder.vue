@@ -99,14 +99,14 @@
                   <v-icon class="mr-2">mdi-record</v-icon>
                   Record
                </v-btn>
-               <v-btn class="ml-1" :disabled="selectedDriver == null || autoTuning" @click="autoTune()" color="info">
+               <!--v-btn class="ml-1" :disabled="selectedDriver == null || autoTuning" @click="autoTune()" color="info" hidden>
                   <v-icon>mdi-tune</v-icon>
                   <span class="ml-1">Auto Tune</span>
                </v-btn>
-               <v-btn v-if="autoTuning" class="ml-1" @click="cancelAutoTune()" color="error">
+               <v-btn v-if="autoTuning" class="ml-1" @click="cancelAutoTune()" color="error" hidden>
                   <v-icon>mdi-tune</v-icon>
                   <span class="ml-1">Cancel</span>
-               </v-btn>
+               </v-btn-->
                <div class="mt-1">{{ autoTuneText }}</div>
             </v-col>
             <v-col cols="10">
