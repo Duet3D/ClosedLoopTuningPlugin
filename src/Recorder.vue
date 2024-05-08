@@ -301,7 +301,8 @@ export default {
    computed: {
       ...mapState('machine/model', {
          boards: (state) => state.boards,
-         axes: (state) => state.move.axes
+         axes: (state) => state.move.axes,
+         extruders: (state) => state.move.extruders
       }),
       ...mapState('settings', ['darkTheme']),
       drivers() {
@@ -315,7 +316,18 @@ export default {
                   });
                }
             });
-         });
+         })
+         //Add closed loop extruders to list
+         this.extruders.forEach((extruder, extruderIdx) => {
+            console.log(extruder, extruderIdx, extruder.driver.board)
+            let driver = extruder.driver;
+            if (this.boards.some((board) => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
+                  results.push({
+                     name: ` Extruder ${extruderIdx} (driver ${driver.board}.${driver.driver})`,
+                     value: `${driver.board}.${driver.driver}`
+                  });
+            }
+         })
          return results;
       },
       closedLoopPoints() {
