@@ -9,7 +9,7 @@
 
 To install the plugin into Duet Web Control (DWC):
 
-1. Navigate to the [latest release](https://github.com/Duet3D/Closed-Loop-Plugin/releases) and download the `closed-loop-plugin.zip` asset
+1. Navigate to the [latest release](https://github.com/Duet3D/ClosedLoopTuningPlugin/releases) and download the `closed-loop-plugin.zip` asset
 2. Upload the zip folder to DWC by using the 'upload system files' button in the 'system' area
 3. Follow the on-screen instructions for installing the plugin
 4. Navigate to Setting > Machine Specific > Machine Specific Plugins and click the 'Start' button
@@ -42,5 +42,5 @@ If you wish to develop on the plugin, run `npm run serve` in the DWC directory a
 
 ## Building as an external plugin
 
-Once you have finished developing, or if you just wish to compile from source, run `npm run build-plugin ../Closed-Loop-Plugin` in the DWC directory where `../Closed-Loo-Plugin` points to this directory.
+Once you have finished developing, or if you just wish to compile from source, run `npm run build-plugin ../ClosedLoopTuningPlugin` in the DWC directory where `../ClosedLoopTuningPlugin` points to this directory.
 This will generate a ZIP file in the `dist` directory within DWC that can be uploaded as a plugin.
