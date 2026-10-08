@@ -9,38 +9,29 @@
 
 To install the plugin into Duet Web Control (DWC):
 
-1. Navigate to the [latest release](https://github.com/Duet3D/ClosedLoopTuningPlugin/releases) and download the `closed-loop-plugin.zip` asset
-2. Upload the zip folder to DWC by using the 'upload system files' button in the 'system' area
-3. Follow the on-screen instructions for installing the plugin
-4. Navigate to Setting > Machine Specific > Machine Specific Plugins and click the 'Start' button
-5. A 'closed loop' option should appear in the left sidebar - you're ready to start tuning!
+1. Navigate to the [latest release](https://github.com/Duet3D/ClosedLoopTuningPlugin/releases) and download the `ClosedLoopTuning-<version>.zip` asset matching your DWC version
+2. In DWC, go to Settings > Plugins > External Plugins and upload the ZIP file
+3. Click the plugin's row to start it
+4. A 'Closed Loop' option appears under Plugins in the left sidebar - you're ready to start tuning!
 
-*Please note that DWC 3.3.0 is the minimum supported version of DWC. If you have difficulty following the above instructions, or if the plugin does not work as expected, please ensure you have [updated to the latest version of DWC](https://docs.duet3d.com/User_manual/RepRapFirmware/Updating_firmware).*
+*This branch targets DWC 3.7 and later. For DWC 3.6 and earlier use the `v3.6-dev` branch and its releases.*
 
-## Contributing and Compiling from source
+## Compiling from source
 
-If you don't fancy using the latest release, or you wish to contribute changes, you can compile this plugin yourself from source. To do this, you first need to clone the Duet Web Control (DWC) repo from https://github.com/Duet3D/DuetWebControl.
+Building a DWC plugin needs a DWC checkout, because the build script resolves the plugin's imports against DWC's own sources and type definitions. Clone https://github.com/Duet3D/DuetWebControl, check out the branch matching your DWC version, and run `npm install` in it.
 
-Once you have DWC cloned, copy the `/src` folder from this repository into the `/src/plugins` folder in DWC. Then, rename the newly copied `/src/plugins/src` folder to `/src/plugins/ClosedLoopTuning`.
+Then build this plugin from the DWC directory:
 
-Copy the following object into the `export default` array in DWC's `/src/plugins/index.js`
-
-```js
-new DwcPlugin({
-  id: 'ClosedLoopTuning',
-  name: 'Closed Loop Tuning',
-  author: 'Louis Irwin, Juan Rosario',
-  version,
-  loadDwcResources: () => import(
-    /* webpackChunkName: "ClosedLoopTuning" */
-    './ClosedLoopTuning/index.js'
-  )
-})
+```
+node scripts/build-plugin.js ../ClosedLoopTuningPlugin
 ```
 
-If you wish to develop on the plugin, run `npm run serve` in the DWC directory and open the resulting build in your browser. You can then navigate to Settings > General > Built-in Plugins and click 'start' to run the plugin. Any changes made in `/src/plugins/ClosedLoopTuning` will then be hot-reloaded and reflected live in the browser.
+The script type-checks the sources, compiles them and writes `ClosedLoopTuning-<version>.zip` into this directory, ready to be uploaded as an external plugin. The plugin's own npm dependencies are installed automatically if they are missing, and removed again afterwards.
 
-## Building as an external plugin
+## Developing
 
-Once you have finished developing, or if you just wish to compile from source, run `npm run build-plugin ../ClosedLoopTuningPlugin` in the DWC directory where `../ClosedLoopTuningPlugin` points to this directory.
-This will generate a ZIP file in the `dist` directory within DWC that can be uploaded as a plugin.
+For live reloading, copy or symlink the `src` directory into DWC as `src/plugins/ClosedLoopTuning` together with `plugin.json`, then run `npm run dev` in the DWC directory. DWC discovers every `src/plugins/<id>/plugin.json` as a built-in plugin, so the plugin can be started from Settings > Plugins > Built-in Plugins and any change to a source file is reflected live in the browser.
+
+Note that `chart.js` must then be installed in the DWC checkout rather than here, since an in-tree plugin resolves its dependencies against DWC's `node_modules`.
+
+See [PLUGINS.md](https://github.com/Duet3D/DuetWebControl/blob/v3.7-dev/PLUGINS.md) in the DWC repository for the full plugin development guide.

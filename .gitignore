@@ -4,6 +4,8 @@ node_modules
 /bin
 /dist
 /obj
+/pkg
+*.zip
 
 # local env files
 .env.local

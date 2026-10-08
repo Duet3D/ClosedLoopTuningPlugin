@@ -1,0 +1,14 @@
+{
+  "name": "closed-loop-tuning-plugin",
+  "version": "3.7.0",
+  "private": true,
+  "description": "Duet Web Control plugin to record and visualise closed-loop driver data",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Duet3D/ClosedLoopTuningPlugin.git"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
+  }
+}

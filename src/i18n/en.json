@@ -1,0 +1,71 @@
+{
+	"menuCaption": "Closed Loop",
+	"tabs": {
+		"record": "Record",
+		"data": "Data"
+	},
+	"chart": {
+		"title": "Data Chart",
+		"selectFile": "Select a file to view",
+		"selectVariables": "Select some variables to plot",
+		"start": "Start",
+		"end": "End",
+		"resetRange": "Reset Range",
+		"keepRange": "Keep Range",
+		"timeAxis": "Time Since Start (ms)"
+	},
+	"files": {
+		"title": "Data Files",
+		"noFiles": "No data files recorded yet",
+		"tooManyFiles": "You have {0} data files",
+		"tooManyFilesHint": "You may wish to delete some to save space",
+		"deleteAllTitle": "Delete All Files",
+		"deleteAllPrompt": "Are you sure you want to delete all CSV files?"
+	},
+	"recorder": {
+		"valuesToRecord": "Values to record",
+		"selectDriver": "Select a driver",
+		"driverHint": "Only one motor will be driven, the axis should be re-homed after tuning",
+		"axisDriver": "{0} axis (driver {1})",
+		"extruderDriver": "Extruder {0} (driver {1})",
+		"tuningConstants": "Tuning constants",
+		"pValue": "P Value",
+		"iValue": "I Value",
+		"dValue": "D Value",
+		"aValue": "A Value",
+		"vValue": "V Value",
+		"update": "Update",
+		"sampling": "Sampling",
+		"sampleCount": "Samples to collect",
+		"samples": "samples",
+		"asFastAsPossible": "As fast as possible",
+		"atFixedRate": "At a fixed rate",
+		"sampleRate": "Sample rate",
+		"perSecond": "/second",
+		"totalTime": "(total {0} seconds)",
+		"movement": "Movement",
+		"stepManoeuvre": "Step Manoeuvre",
+		"speed": "Speed",
+		"distance": "Distance",
+		"acceleration": "Acceleration",
+		"customGCode": "Custom G-Code",
+		"gcode": "G-Code",
+		"gcodeHint": "Enter custom G-code to record",
+		"collectData": "Collect data",
+		"immediately": "Immediately",
+		"onNextMove": "On next move",
+		"record": "Record",
+		"enterGCode": "Enter a custom G-code command before recording",
+		"extruderNeedsCustomGCode": "The step manoeuvre moves an axis, so an extruder driver can only be recorded with custom G-code",
+		"confirmTitle": "Confirm",
+		"confirmText": "You have chosen to perform a tuning manoeuvre which will move the axis.",
+		"confirmWarning": "This movement may not respect endstops.",
+		"confirmHint": "Please ensure the axis is in a safe position (usually the center) before proceeding.",
+		"dontShowAgain": "Don't show this again"
+	},
+	"variables": {
+		"title": "Variables",
+		"all": "All",
+		"none": "None"
+	}
+}

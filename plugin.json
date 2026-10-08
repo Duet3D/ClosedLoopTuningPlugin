@@ -1,7 +1,7 @@
 {
    "id": "ClosedLoopTuning",
    "name": "Closed Loop Tuning",
-   "author": "Louis Irwin, Juan Rosario",
+   "author": "Louis Irwin, Juan Rosario, Christian Hammacher",
    "version": "auto",
    "dwcVersion": "auto-major",
    "license": "GPL-3.0",

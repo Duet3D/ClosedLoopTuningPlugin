@@ -1,170 +1,183 @@
-<template>
-   <v-card class="d-flex flex-column fill-height">
-      <v-card-title class="pt-2 pb-1">
-         <v-icon small class="mr-2">mdi-file-table-box-multiple</v-icon>
-         Data Files
-         <v-spacer />
-         <v-icon class="ml-2" @click="refresh">mdi-refresh</v-icon>
-         <v-icon v-if="!isDeleting" class="ml-2" @click="deleteDialog = true">mdi-delete</v-icon>
-         <v-progress-circular  class="disable-transition ml-2" size="24" v-else :value="deleteProgress"></v-progress-circular>
-      </v-card-title>
+<style scoped>
+/* Scroll the list rather than the card, so the pagination stays reachable on a short viewport */
+.file-list {
+	flex: 1 1 0;
+	min-height: 0;
+	overflow-y: auto;
+}
 
-      <v-card-text class="pb-0">
-         <v-list dense :v-if="!loading">
-            <div v-if="files.length > 200" class="w-full error--text text-center mb-3">
-               Warning: You have {{ this.files.length }} data files<br />
-               You may wish to delete some to save space
-            </div>
-            <v-list-item-group v-model="selectedIndex" color="primary">
-               <v-list-item v-for="(file, index) in displayedFiles" :key="file.name" :value="index">
-                  <v-list-item-content>
-                     <v-list-item-title>
-                        <div class="mt-1 float-left">
-                           {{ file.name }}
-                        </div>
-                        <v-icon class="ml-2 float-right" @click.stop="deleteFile(file.name)">mdi-delete</v-icon>
-                     </v-list-item-title>
-                  </v-list-item-content>
-               </v-list-item>
-            </v-list-item-group>
-         </v-list>
-         <v-dialog :value="deleteDialog" width="480" persistent>
-            <v-card>
-               <v-card-title> Delete All Files </v-card-title>
-               <v-card-text> Are you sure you want to delete all CSV files? </v-card-text>
-               <v-card-actions>
-                  <v-spacer />
-                  <v-btn class="mr-1" @click="deleteAll()" color="error">Delete</v-btn>
-                  <v-btn @click="deleteDialog = false">Cancel</v-btn>
-               </v-card-actions>
-            </v-card>
-         </v-dialog>
-      </v-card-text>
-      <v-spacer />
-
-      <v-card-actions>
-         <v-pagination v-model="page" :length="Math.ceil(files.length / maxFileDisplay)" :total-visible="Math.ceil(files.length / maxFileDisplay) > 4 ? 5 : null" class="mx-auto" />
-      </v-card-actions>
-   </v-card>
-</template>
-
-<style lang="scss">
+/* The circular progress is stepped per deleted file, so its default transition lags behind */
 .disable-transition {
-   transition: none !important;
-   .v-progress-circular__overlay {
-      transition: none;
-   }
+	transition: none !important;
+}
+
+.disable-transition :deep(.v-progress-circular__overlay) {
+	transition: none;
 }
 </style>
 
-<script>
-'use strict';
+<template>
+	<v-card variant="flat" class="d-flex flex-column fill-height">
+		<v-card-title class="d-flex align-center pt-2 pb-1">
+			<v-icon size="small" class="mr-2">mdi-file-table-box-multiple</v-icon>
+			{{ $t("plugins.ClosedLoopTuning.files.title") }}
+			<v-spacer />
+			<v-icon class="ml-2" :disabled="loading" @click="refresh">mdi-refresh</v-icon>
+			<v-icon v-if="!isDeleting" class="ml-2" :disabled="files.length === 0" @click="deleteDialog = true">mdi-delete</v-icon>
+			<v-progress-circular v-else class="disable-transition ml-2" size="24" :model-value="deleteProgress" />
+		</v-card-title>
 
-import { mapGetters, mapActions } from 'vuex';
+		<v-progress-linear :active="loading" indeterminate />
 
-import Path from '../../utils/path'
+		<v-card-text class="file-list pb-0">
+			<div v-if="files.length > 200" class="text-error text-center mb-3">
+				{{ $t("plugins.ClosedLoopTuning.files.tooManyFiles", [files.length]) }}<br>
+				{{ $t("plugins.ClosedLoopTuning.files.tooManyFilesHint") }}
+			</div>
 
-export default {
-   data: () => ({
-      page: 1,
-      files: [],
-      loading: false,
-      selectedIndex: -1,
-      maxFileDisplay: 13,
-      deleteDialog: false,
-      isDeleting: false,
-      deleteProgress: 0
-   }),
-   computed: {
-      ...mapGetters(['isConnected', 'uiFrozen']),
-      displayedFiles() {
-         return this.files.slice((this.page - 1) * this.maxFileDisplay, this.page * this.maxFileDisplay);
-      }
-   },
-   mounted() {
-      this.refresh();
-      this.$root.$on('updatePIDGraph', () => {
-         this.selectMostRecentFile();
-      });
-   },
-   unmounted() {
-      this.$root.$off('updatePIDGraph');
-   },
-   methods: {
-      ...mapActions('machine', {
-         getFileList: 'getFileList',
-         machineDelete: 'delete'
-      }),
-      async refresh() {
-         if (!this.isConnected) {
-            this.selectedIndex = -1;
-            this.files = [];
-            return;
-         }
+			<v-alert v-if="files.length === 0 && !loading" type="info" variant="tonal" density="compact"
+					 class="mb-0 flex-grow-0 flex-shrink-0"
+					 :text="$t('plugins.ClosedLoopTuning.files.noFiles')" />
 
-         if (this.loading) {
-            // Don't do multiple actions at once
-            return;
-         }
+			<v-list v-else density="compact">
+				<v-list-item v-for="file in displayedFiles" :key="file.name" :title="file.name"
+							 :active="file.name === selectedFile" color="primary"
+							 @click="select(file.name)">
+					<template #append>
+						<v-icon @click.stop="deleteFile(file.name)">mdi-delete</v-icon>
+					</template>
+				</v-list-item>
+			</v-list>
+		</v-card-text>
 
-         this.selectedIndex = -1;
-         this.loading = true;
-         try {
-            this.files = (await this.getFileList(Path.closedLoop)).filter((file) => !file.isDirectory && file.name.endsWith('.csv')).sort((a, b) => b.lastModified - a.lastModified);
-         } finally {
-            this.loading = false;
-         }
-      },
-      async selectMostRecentFile() {
-         await this.refresh();
-         this.page = 1;
-         this.selectedIndex = 0;
-      },
-      async deleteFile(fileName) {
-         try {
-            await this.machineDelete(Path.combine(Path.closedLoop, fileName));
-            await this.refresh();
-         } catch (e) {
-            this.$makeNotification('error', this.$t('notification.delete.errorTitle', [fileName]), e.message);
-         }
-      },
-      async deletePage() {
-         for (let i = (this.page - 1) * this.maxFileDisplay; i < this.page * this.maxFileDisplay; i++) {
-            if (i >= this.files.length) {
-               continue;
-            }
+		<v-card-actions v-if="pageCount > 1">
+			<v-pagination v-model="page" :length="pageCount" :total-visible="5" class="mx-auto" />
+		</v-card-actions>
 
-            try {
-               await this.machineDelete(Path.combine(Path.closedLoop, this.files[i].name));
-            } catch (e) {
-               this.$makeNotification('error', this.$t('notification.delete.errorTitle', [this.files[i].name]), e.message);
-            }
-         }
-         await this.refresh();
-      },
-      async deleteAll() {
-         try {
-            this.deleteDialog = false;
-            this.isDeleting = true;
-            for (let i = 0; i < this.files.length; i++) {
-               try {
-                  this.deleteProgress = (i / this.files.length) * 100;
-                  await this.machineDelete(Path.combine(Path.closedLoop, this.files[i].name));
-               } catch (e) {
-                  this.$makeNotification('error', this.$t('notification.delete.errorTitle', [this.files[i].name]), e.message);
-               }
-            }
-            await this.refresh();
-         } finally {
-            this.isDeleting = false;
-            this.deleteProgress = 0;
-         }
-      }
-   },
-   watch: {
-      selectedIndex(to) {
-         this.$emit('fileSelect', to >= 0 && to < this.files.length ? Path.combine(Path.closedLoop, this.files[to].name) : null);
-      }
-   }
-};
+		<v-dialog v-model="deleteDialog" width="480" persistent>
+			<v-card>
+				<v-card-title>
+					{{ $t("plugins.ClosedLoopTuning.files.deleteAllTitle") }}
+				</v-card-title>
+				<v-card-text>
+					{{ $t("plugins.ClosedLoopTuning.files.deleteAllPrompt") }}
+				</v-card-text>
+				<v-card-actions>
+					<v-spacer />
+					<v-btn class="mr-1" color="error" @click="deleteAll">
+						{{ $t("button.delete") }}
+					</v-btn>
+					<v-btn @click="deleteDialog = false">
+						{{ $t("generic.cancel") }}
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
+	</v-card>
+</template>
+
+<script setup lang="ts">
+import { DirectoryNotFoundError, type FileListItem } from "@duet3d/connectors";
+import { i18n, LogLevel, useMachineStore, useUiStore } from "DuetWebControl";
+import { computed, onMounted, ref, watch } from "vue";
+
+import { getErrorMessage } from "@/utils/errors";
+import Path from "@/utils/path";
+
+const maxFileDisplay = 13;
+
+const emit = defineEmits<{
+	fileSelect: [string | null];
+}>();
+
+const machineStore = useMachineStore();
+const uiStore = useUiStore();
+
+const page = ref(1);
+const files = ref<Array<FileListItem>>([]);
+const loading = ref(false);
+const selectedFile = ref<string | null>(null);
+const deleteDialog = ref(false);
+const isDeleting = ref(false);
+const deleteProgress = ref(0);
+
+const pageCount = computed(() => Math.ceil(files.value.length / maxFileDisplay));
+const displayedFiles = computed(() => files.value.slice((page.value - 1) * maxFileDisplay, page.value * maxFileDisplay));
+
+function select(name: string) {
+	selectedFile.value = (selectedFile.value === name) ? null : name;
+}
+
+async function refresh() {
+	if (!machineStore.isConnected) {
+		selectedFile.value = null;
+		files.value = [];
+		return;
+	}
+
+	if (loading.value) {
+		return;
+	}
+
+	selectedFile.value = null;
+	loading.value = true;
+	try {
+		const list = await machineStore.getFileList(Path.closedLoop);
+		files.value = list.filter((file) => !file.isDirectory && file.name.endsWith(".csv")).sort((a, b) => (b.lastModified?.getTime() ?? 0) - (a.lastModified?.getTime() ?? 0));
+	} catch (e) {
+		files.value = [];
+		if (!(e instanceof DirectoryNotFoundError)) {
+			// The directory is only created by the firmware on the first recording, so a missing one is not worth reporting
+			uiStore.makeNotification(LogLevel.error, i18n.global.t("plugins.ClosedLoopTuning.files.title"), getErrorMessage(e));
+		}
+	} finally {
+		loading.value = false;
+		page.value = Math.min(page.value, Math.max(pageCount.value, 1));
+	}
+}
+
+async function selectMostRecentFile() {
+	await refresh();
+	page.value = 1;
+	if (files.value.length > 0) {
+		selectedFile.value = files.value[0].name;
+	}
+}
+
+async function deleteFile(fileName: string) {
+	try {
+		await machineStore.delete(Path.combine(Path.closedLoop, fileName));
+		await refresh();
+	} catch (e) {
+		uiStore.makeNotification(LogLevel.error, i18n.global.t("notification.delete.errorTitle", [fileName]), getErrorMessage(e));
+	}
+}
+
+async function deleteAll() {
+	deleteDialog.value = false;
+	isDeleting.value = true;
+	try {
+		const toDelete = files.value.map((file) => file.name);
+		for (let i = 0; i < toDelete.length; i++) {
+			deleteProgress.value = (i / toDelete.length) * 100;
+			try {
+				await machineStore.delete(Path.combine(Path.closedLoop, toDelete[i]));
+			} catch (e) {
+				uiStore.makeNotification(LogLevel.error, i18n.global.t("notification.delete.errorTitle", [toDelete[i]]), getErrorMessage(e));
+			}
+		}
+		await refresh();
+	} finally {
+		isDeleting.value = false;
+		deleteProgress.value = 0;
+	}
+}
+
+onMounted(() => refresh());
+
+watch(selectedFile, (to) => emit("fileSelect", (to !== null) ? Path.combine(Path.closedLoop, to) : null));
+
+watch(() => machineStore.isConnected, () => refresh());
+
+defineExpose({ selectMostRecentFile });
 </script>

@@ -1,414 +1,410 @@
 <template>
-   <v-card class="fill-height">
-      <v-card-title class="pt-2 pb-1">
-         <v-icon class="mr-2">mdi-record-rec</v-icon>
-         Record
-      </v-card-title>
+	<div class="pa-4">
+		<v-row>
+			<v-col cols="12" lg="5">
+				<div class="text-subtitle-1 mb-2">{{ $t("plugins.ClosedLoopTuning.recorder.valuesToRecord") }}</div>
+				<v-row dense>
+					<v-col v-for="column in [0, 1, 2]" :key="column" cols="12" sm="4">
+						<v-checkbox v-for="variable in nthThirdOfVariables(column)" :key="variable.id"
+									v-model="selectedVariables" :label="variable.column" :value="variable"
+									:color="settingsStore.darkTheme ? variable.colour.dark : variable.colour.light"
+									density="compact" hide-details />
+					</v-col>
+				</v-row>
+			</v-col>
 
-      <v-card-text>
-         <v-row>
-            <v-col v-for="colNo in [0, 1, 2]" :key="colNo" cols="2">
-               <v-checkbox dense hide-details v-for="variable in nthThirdOfVariables(colNo)" :key="variable.id" v-model="selectedVariables" :label="variable.title" :value="variable" :color="darkTheme ? variable.colour.dark : variable.colour.light" />
-            </v-col>
-            <v-col cols="3">
-               <v-select v-model="selectedDriver" :items="drivers" hint="Only one motor will be driven, axis should be re-homed after tuning" item-text="name" item-value="value" label="Select a driver" single-line persistent-hint class="pb-4" />
-               <v-form @submit.prevent="updatePID" v-on:keyup.enter="updatePID">
-                  <v-row dense>
-                     <v-col cols="4">
-                        <v-text-field label="P Value" numeric v-model="pTerm"></v-text-field>
-                     </v-col>
-                     <v-col cols="4">
-                        <v-text-field label="I Value" numeric v-model="iTerm"></v-text-field>
-                     </v-col>
-                     <v-col cols="4">
-                        <v-text-field label="D Value" numeric v-model="dTerm"></v-text-field>
-                     </v-col>
-                     <v-col cols="4">
-                        <v-text-field label="A Value" numeric v-model="aTerm"></v-text-field>
-                     </v-col>
-                     <v-col cols="4">
-                        <v-text-field label="V Value" numeric v-model="vTerm"></v-text-field>
-                     </v-col>
-                     <v-col cols="4">
-                        <v-btn type="submit" :loading="updatingPIDValue">Update</v-btn>
-                     </v-col>
-                  </v-row>
-               </v-form>
-               <v-row>
-                  <v-col cols="6">
-                     <v-text-field label="Samples to collect" v-model="sampleCount" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
-                        <template #append> samples </template>
-                     </v-text-field>
-                  </v-col>
-                  <v-col cols="6">
-                     <v-radio-group v-model="sampleRateContinuous">
-                        <v-radio label="As fast as possible" :value="true" dense hide-details />
-                        <v-radio :value="false" dense hide-details>
-                           <template v-slot:label>
-                              <v-text-field label="At a fixed rate" v-model="sampleRate" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus :hint="sampleRateContinuous ? '' : `(total ${totalTime} seconds)`" persistent-hint>
-                                 <template slot="append"> /second </template>
-                              </v-text-field>
-                           </template>
-                        </v-radio>
-                     </v-radio-group>
-                  </v-col>
-               </v-row>
-            </v-col>
-            <v-col cols="3">
-               <v-radio-group class="mt-0 pt-0" label="Movement" v-model="calibrationMovement">
-                  <v-radio :value="64" label="Step Manoeuvre" dense hide-details> </v-radio>
-                  <v-row v-show="calibrationMovement === 64" dense>
-                     <v-col cols="12"> Step Manoeuvre Parameters </v-col>
-                     <v-col cols="6">
-                        <v-text-field label="Speed" persistent-hint v-model="moveSpeed" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
-                           <template #append> mm/s </template>
-                        </v-text-field>
-                     </v-col>
-                     <v-col cols="6">
-                        <v-text-field label="Distance" v-model="moveDistance" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
-                           <template #append> mm </template>
-                        </v-text-field>
-                     </v-col>
-                     <v-col cols="6">
-                        <v-text-field label="Acceleration" v-model="moveAcceleration" :rules="[(v) => !!v || $t('dialog.inputRequired'), (v) => isNumber(parseFloat(v)) || $t('dialog.numberRequired')]" required autofocus>
-                           <template #append> mm/s^2 </template>
-                        </v-text-field>
-                     </v-col>
-                  </v-row>
-                  <v-radio :value="0" hide-details label="Custom G-Code" />
-                  <v-row v-show="calibrationMovement === 0" dense >
-                     <v-col cols="12">
-                        <v-text-field  class="pt-1" label="G-Code" persistent-hint v-model="customGCODE" hint="Enter custom g-code to record" />
-                     </v-col>
-                  </v-row>
-               </v-radio-group>
+			<v-col cols="12" sm="6" lg="4">
+				<v-select v-model="selectedDriver" :items="drivers" item-title="name" item-value="value"
+						  :label="$t('plugins.ClosedLoopTuning.recorder.selectDriver')"
+						  :hint="$t('plugins.ClosedLoopTuning.recorder.driverHint')"
+						  :disabled="uiStore.uiFrozen" persistent-hint density="compact" />
 
-               <v-select
-                  :items="[
-                     { text: 'Immediately', value: 0 },
-                     { text: 'On next move', value: 1 }
-                  ]"
-                  label="Collect data"
-                  v-model="activateMode"
-               ></v-select>
-            </v-col>
-         </v-row>
-         <v-row>
-            <v-col cols="auto">
-               <v-btn :disabled="!ready || autoTuning || recording" @click="record()" color="info">
-                  <v-icon class="mr-2">mdi-record</v-icon>
-                  Record
-               </v-btn>
-               <!--v-btn class="ml-1" :disabled="selectedDriver == null || autoTuning" @click="autoTune()" color="info" hidden>
-                  <v-icon>mdi-tune</v-icon>
-                  <span class="ml-1">Auto Tune</span>
-               </v-btn>
-               <v-btn v-if="autoTuning" class="ml-1" @click="cancelAutoTune()" color="error" hidden>
-                  <v-icon>mdi-tune</v-icon>
-                  <span class="ml-1">Cancel</span>
-               </v-btn-->
-               <div class="mt-1">{{ autoTuneText }}</div>
-            </v-col>
-            <v-col cols="10">
-               <div v-if="ready" :class="{ 'pt-2': !error && !warning && recordingProgress == null && calibrationMovement != 0 }" class="font-weight-black info--text">{{ GCODECommand }}</div>
-               <div v-if="ready && calibrationMovement == 0" class="font-weight-black info--text">{{ customGCODE }}</div>
-               <div v-if="error" class="font-weight-black error--text">{{ error }}</div>
-               <div v-if="warning" class="font-weight-black warning--text">{{ warning }}</div>
-               <v-progress-linear v-if="recordingProgress != null" :indeterminate="recordingProgress == -1" :value="recordingProgress == -1 ? 0 : recordingProgress" class="mb-4" />
-            </v-col>
-         </v-row>
-      </v-card-text>
+				<div class="text-subtitle-1 mt-6 mb-2">{{ $t("plugins.ClosedLoopTuning.recorder.tuningConstants") }}</div>
+				<v-form @submit.prevent="updatePID">
+					<v-row dense>
+						<v-col cols="4">
+							<v-text-field v-model="pTerm" type="number" :label="$t('plugins.ClosedLoopTuning.recorder.pValue')" density="compact" hide-details />
+						</v-col>
+						<v-col cols="4">
+							<v-text-field v-model="iTerm" type="number" :label="$t('plugins.ClosedLoopTuning.recorder.iValue')" density="compact" hide-details />
+						</v-col>
+						<v-col cols="4">
+							<v-text-field v-model="dTerm" type="number" :label="$t('plugins.ClosedLoopTuning.recorder.dValue')" density="compact" hide-details />
+						</v-col>
+						<v-col cols="4">
+							<v-text-field v-model="aTerm" type="number" :label="$t('plugins.ClosedLoopTuning.recorder.aValue')" density="compact" hide-details />
+						</v-col>
+						<v-col cols="4">
+							<v-text-field v-model="vTerm" type="number" :label="$t('plugins.ClosedLoopTuning.recorder.vValue')" density="compact" hide-details />
+						</v-col>
+						<v-col cols="4" class="d-flex">
+							<v-btn type="submit" :disabled="!canUpdatePID" :loading="updatingPID" block>
+								{{ $t("plugins.ClosedLoopTuning.recorder.update") }}
+							</v-btn>
+						</v-col>
+					</v-row>
+				</v-form>
 
-      <v-dialog v-model="showDialog" persistent width="480">
-         <v-card>
-            <v-card-title>
-               <span class="headline"> Confirm </span>
-            </v-card-title>
+				<div class="text-subtitle-1 mt-6 mb-2">{{ $t("plugins.ClosedLoopTuning.recorder.sampling") }}</div>
+				<v-text-field v-model.number="sampleCount" type="number" min="1" :rules="numberRules"
+							  :label="$t('plugins.ClosedLoopTuning.recorder.sampleCount')"
+							  :suffix="$t('plugins.ClosedLoopTuning.recorder.samples')" density="compact" />
 
-            <v-card-text>
-               You have chosen to perform a tuning manoeuvre which will move the axis.
-               <div class="text-center py-2 font-weight-black error--text">This movement may not respect endstops.</div>
-               Please ensure the axis is in a safe position (usually the center) before proceeding.
-            </v-card-text>
+				<v-radio-group v-model="sampleRateContinuous" hide-details class="mb-2">
+					<v-radio :value="true" :label="$t('plugins.ClosedLoopTuning.recorder.asFastAsPossible')" density="compact" />
+					<v-radio :value="false" :label="$t('plugins.ClosedLoopTuning.recorder.atFixedRate')" density="compact" />
+				</v-radio-group>
 
-            <v-card-actions>
-               <v-btn color="error darken-1" text @click="dialogResult(false)">
-                  {{ $t('generic.cancel') }}
-               </v-btn>
-               <v-spacer />
-               <v-checkbox v-model="dontShowModal" class="pr-2">
-                  <template v-slot:label>
-                     <span style="font-size: 0.7em">Don't show this again</span>
-                  </template>
-               </v-checkbox>
-               <v-btn color="blue darken-1" text @click="dialogResult(true)">
-                  {{ $t('generic.ok') }}
-               </v-btn>
-            </v-card-actions>
-         </v-card>
-      </v-dialog>
-   </v-card>
+				<v-text-field v-model.number="sampleRate" type="number" min="1" :rules="numberRules"
+							  :disabled="sampleRateContinuous"
+							  :label="$t('plugins.ClosedLoopTuning.recorder.sampleRate')"
+							  :suffix="$t('plugins.ClosedLoopTuning.recorder.perSecond')"
+							  :hint="$t('plugins.ClosedLoopTuning.recorder.totalTime', [totalTime])"
+							  persistent-hint density="compact" />
+			</v-col>
+
+			<v-col cols="12" sm="6" lg="3">
+				<div class="text-subtitle-1 mb-2">{{ $t("plugins.ClosedLoopTuning.recorder.movement") }}</div>
+				<v-radio-group v-model="calibrationMovement" hide-details>
+					<v-radio :value="StepManoeuvre" :disabled="!canStepManoeuvre"
+							 :label="$t('plugins.ClosedLoopTuning.recorder.stepManoeuvre')" density="compact" />
+
+					<v-row v-show="calibrationMovement === StepManoeuvre" dense class="mt-1">
+						<v-col cols="6">
+							<v-text-field v-model.number="moveSpeed" type="number" min="1" :rules="numberRules"
+										  :label="$t('plugins.ClosedLoopTuning.recorder.speed')" suffix="mm/s" density="compact" />
+						</v-col>
+						<v-col cols="6">
+							<v-text-field v-model.number="moveDistance" type="number" min="1" :rules="numberRules"
+										  :label="$t('plugins.ClosedLoopTuning.recorder.distance')" suffix="mm" density="compact" />
+						</v-col>
+						<v-col cols="12">
+							<v-text-field v-model.number="moveAcceleration" type="number" min="1" :rules="numberRules"
+										  :label="$t('plugins.ClosedLoopTuning.recorder.acceleration')" suffix="mm/s^2" density="compact" />
+						</v-col>
+					</v-row>
+
+					<div v-if="selectedDriver !== null && !canStepManoeuvre" class="text-caption text-warning mb-2">
+						{{ $t("plugins.ClosedLoopTuning.recorder.extruderNeedsCustomGCode") }}
+					</div>
+
+					<v-radio :value="CustomGCode" :label="$t('plugins.ClosedLoopTuning.recorder.customGCode')" density="compact" />
+
+					<v-text-field v-show="calibrationMovement === CustomGCode" v-model="customGCode" class="mt-2"
+								  :label="$t('plugins.ClosedLoopTuning.recorder.gcode')"
+								  :hint="$t('plugins.ClosedLoopTuning.recorder.gcodeHint')"
+								  persistent-hint density="compact" />
+				</v-radio-group>
+
+				<v-select v-model="activateMode" :items="activateModes" item-title="title" item-value="value"
+						  :label="$t('plugins.ClosedLoopTuning.recorder.collectData')"
+						  :disabled="uiStore.uiFrozen" density="compact" class="mt-6" hide-details />
+			</v-col>
+		</v-row>
+
+		<v-divider class="my-4" />
+
+		<v-row align="center">
+			<v-col cols="12" sm="auto">
+				<v-btn color="info" :disabled="!ready || recording || uiStore.uiFrozen" @click="record">
+					<v-icon class="mr-2">mdi-record</v-icon>
+					{{ $t("plugins.ClosedLoopTuning.recorder.record") }}
+				</v-btn>
+			</v-col>
+			<v-col cols="12" sm>
+				<div v-if="ready" class="font-weight-black text-info">{{ collectionCommand }}</div>
+				<div v-if="ready && calibrationMovement === CustomGCode" class="font-weight-black text-info">{{ customGCode }}</div>
+				<div v-if="error" class="font-weight-black text-error">{{ error }}</div>
+				<div v-if="warning" class="font-weight-black text-warning">{{ warning }}</div>
+				<v-progress-linear v-if="recordingProgress !== null" :indeterminate="recordingProgress < 0"
+								   :model-value="Math.max(recordingProgress, 0)" class="mt-2" />
+			</v-col>
+		</v-row>
+
+		<v-dialog v-model="showDialog" width="480" persistent>
+			<v-card>
+				<v-card-title>
+					<span class="text-h5">{{ $t("plugins.ClosedLoopTuning.recorder.confirmTitle") }}</span>
+				</v-card-title>
+
+				<v-card-text>
+					{{ $t("plugins.ClosedLoopTuning.recorder.confirmText") }}
+					<div class="text-center py-2 font-weight-black text-error">
+						{{ $t("plugins.ClosedLoopTuning.recorder.confirmWarning") }}
+					</div>
+					{{ $t("plugins.ClosedLoopTuning.recorder.confirmHint") }}
+				</v-card-text>
+
+				<v-card-actions>
+					<v-btn color="error" variant="text" @click="showDialog = false">
+						{{ $t("generic.cancel") }}
+					</v-btn>
+					<v-spacer />
+					<v-checkbox v-model="dontShowModal" class="pr-2" density="compact" hide-details>
+						<template #label>
+							<span class="text-caption">{{ $t("plugins.ClosedLoopTuning.recorder.dontShowAgain") }}</span>
+						</template>
+					</v-checkbox>
+					<v-btn color="primary" variant="text" @click="confirmRecord">
+						{{ $t("generic.ok") }}
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
+	</div>
 </template>
 
-<script>
-'use strict';
+<script setup lang="ts">
+import { type AxisLetter, type DriverId, ExpansionBoard } from "@duet3d/objectmodel";
+import { i18n, useMachineStore, useSettingsStore, useUiStore } from "DuetWebControl";
+import { computed, ref, watch } from "vue";
 
-import { mapState, mapActions } from 'vuex';
+import { getErrorMessage } from "@/utils/errors";
 
-import { variables, tuningManoeuvres } from './config.js';
+import { type ClosedLoopVariable, CustomGCode, StepManoeuvre, variables } from "./config";
 
-import PIDTune, { AxisParameters } from './PIDTune.js';
-// import { mapState, mapGetters, mapActions } from 'vuex'
+const emit = defineEmits<{
+	recordingFinished: [];
+}>();
 
-export default {
-   data: () => ({
-      variables,
-      error: null,
-      warning: null,
-      sampleRate: 100,
-      activateMode: 0,
-      tuningManoeuvres,
-      sampleCount: 500,
-      customGCODE: null,
-      showDialog: false,
-      selectedDriver: null,
-      dontShowModal: false,
-      selectedVariables: [],
-      calibrationMovement: 64,
-      recordingProgress: null, // null = not recording, -1 = recording but unknown progress, >=0 = recording & known progress
-      sampleRateContinuous: true,
-      pTerm: 0,
-      iTerm: 0,
-      dTerm: 0,
-      aTerm: 0,
-      vTerm: 0,
-      updatingPIDValue: false,
-      autoTuning: false,
-      autoTuner: null,
-      recording: false,
-      autoTuneText: '',
-      axisParams: null,
-      moveSpeed: 100,
-      moveDistance: 50,
-      moveAcceleration: 10000
-   }),
-   methods: {
-      ...mapActions('machine', ['sendCode', 'getFileList', 'download']),
-      nthThirdOfVariables(n) {
-         let filteredVariables = this.variables.filter((v) => !v.hideRecord);
-         let thirdLength = Math.ceil(filteredVariables.length / 3);
-         return filteredVariables.slice(n * thirdLength, (n + 1) * thirdLength);
-      },
-      dialogResult(res) {
-         this.showDialog = false;
-         if (res) {
-            this.record(true);
-         }
-      },
-      async record(force = false) {
-         this.recording = true;
+const machineStore = useMachineStore();
+const settingsStore = useSettingsStore();
+const uiStore = useUiStore();
 
-         //Capture original acceleration
-         const originalAcceleration = this.axisParams.acceleration;
+const numberRules = [
+	(value: unknown) => (value !== null && value !== undefined && value !== "") || i18n.global.t("dialog.inputRequired"),
+	(value: unknown) => !Number.isNaN(parseFloat(String(value))) || i18n.global.t("dialog.numberRequired")
+];
 
-         try {
-            force |= this.dontShowModal;
-            if (this.calibrationMovement !== -1 && !force) {
-               this.showDialog = true;
-               return;
-            }
+const selectedDriver = ref<string | null>(null);
+const selectedVariables = ref<Array<ClosedLoopVariable>>([]);
+const sampleCount = ref(500);
+const sampleRate = ref(100);
+const sampleRateContinuous = ref(true);
+const activateMode = ref(0);
+const calibrationMovement = ref(StepManoeuvre);
+const customGCode = ref("");
+const moveSpeed = ref(100);
+const moveDistance = ref(50);
+const moveAcceleration = ref(10000);
 
-            if (!this.customGCODE && this.calibrationMovement === 0) {
-               this.error = 'Enter a custom GCODE command before recording.';
-               return;
-            }
+const pTerm = ref("0");
+const iTerm = ref("0");
+const dTerm = ref("0");
+const aTerm = ref("0");
+const vTerm = ref("0");
+const updatingPID = ref(false);
 
-            await this.sendCode({ code: `M201 ${this.axisParams.letter}${this.moveAcceleration}`, log: false });
-            console.log(this.stepCommand);
-            const gcodeToSend = this.calibrationMovement === 0 ? this.GCODECommand + '\n' + this.customGCODE : this.GCODECommand + '\n' + this.stepCommand();
-            this.recordingProgress = -1;
-            const reply = await this.sendCode({ code: gcodeToSend, fromInput: false });
-            if (reply.startsWith('Error: ')) {
-               this.error = reply;
-               return;
-            } else if (reply.startsWith('Warning: ')) {
-               this.warning = reply;
-            }
-            this.error = null;
-            this.warning = null;
-         } finally {
-            //Reset original acceleration
-            await this.sendCode({ code: `M201 ${this.axisParams.letter}${originalAcceleration}`, log: false });
-            await setTimeout(() => {
-               this.recording = false;
-            }, 1000);
-         }
-      },
-      stepCommand() {
-         return `G91 G1 H2 ${this.axisParams.letter}${this.moveDistance} F${this.moveSpeed * 60} \n G4 P100 \n G1 H2 ${this.axisParams.letter}-${this.moveDistance} F${this.moveSpeed * 60} G90`;
-      },
-      checkTerm(term) {
-         return term != '' && term >= 0;
-      },
-      async updatePID() {
-         if (this.checkTerm(this.pTerm) && this.checkTerm(this.iTerm) && this.checkTerm(this.dTerm)) {
-            try {
-               this.updatingPIDValue = true;
-               await this.sendCode({ code: `M569.1 P${this.selectedDriver}  R${this.pTerm} I${this.iTerm} D${this.dTerm} A${this.aTerm} V${this.vTerm}`, log: true });
-            } finally {
-               this.updatingPIDValue = false;
-            }
-         } else {
-            console.log('error');
-         }
-      },
-      async autoTune() {
-         try {
-            if (this.axisParams === null)
-               //JER put an error notice around this
-               return;
-            this.error = null;
-            this.autoTuning = true;
-            this.autoTuner = new PIDTune(this.sendCode, this.getFileList, this.download, this.selectedDriver, this.updateGraph, this.updateAutotuneText, this.axisParams);
-            await this.autoTuner.execute();
-            this.pTerm = this.autoTuner.pTerm;
-            this.iTerm = this.autoTuner.iTerm;
-            this.dTerm = this.autoTuner.dTerm;
-         } catch (ex) {
-            console.error(ex);
-            this.error = ex;
-         } finally {
-            this.autoTuning = false;
-         }
-      },
-      cancelAutoTune() {
-         this.autoTuner.cancel();
-         this.autoTuning = false;
-      },
-      updateGraph(filename, p, i, d) {
-         //this.$root.$emit('updatePIDGraph', filename);
-         this.pTerm = p;
-         this.iTerm = i;
-         this.dTerm = d;
-      },
-      updateAutotuneText(text) {
-         this.autoTuneText = text;
-      }
-   },
-   unmounted() {
-      this.cancelAutoTune();
-   },
-   computed: {
-      ...mapState('machine/model', {
-         boards: (state) => state.boards,
-         axes: (state) => state.move.axes,
-         extruders: (state) => state.move.extruders
-      }),
-      ...mapState('settings', ['darkTheme']),
-      drivers() {
-         let results = [];
-         this.axes.forEach((axis) => {
-            axis.drivers.forEach((driver) => {
-               if (this.boards.some((board) => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
-                  results.push({
-                     name: `${axis.letter} axis (driver ${driver.board}.${driver.driver})`,
-                     value: `${driver.board}.${driver.driver}`
-                  });
-               }
-            });
-         })
-         //Add closed loop extruders to list
-         this.extruders.forEach((extruder, extruderIdx) => {
-            console.log(extruder, extruderIdx, extruder.driver.board)
-            let driver = extruder.driver;
-            if (this.boards.some((board) => board && board.canAddress === parseInt(driver.board) && board.closedLoop != null)) {
-                  results.push({
-                     name: ` Extruder ${extruderIdx} (driver ${driver.board}.${driver.driver})`,
-                     value: `${driver.board}.${driver.driver}`
-                  });
-            }
-         })
-         return results;
-      },
-      closedLoopPoints() {
-         if (this.selectedDriver) {
-            const canAddress = this.selectedDriver.split('.')[0];
-            const board = this.boards.find((board) => board.canAddress == canAddress);
-            if (board && board.closedLoop) {
-               return board.closedLoop.points;
-            }
-         }
-         return null;
-      },
-      closedLoopRuns() {
-         if (this.selectedDriver) {
-            const canAddress = this.selectedDriver.split('.')[0];
-            const board = this.boards.find((board) => board.canAddress == canAddress);
-            if (board && board.closedLoop) {
-               return board.closedLoop.runs;
-            }
-         }
-         return null;
-      },
-      totalTime() {
-         return Math.round((this.sampleCount / this.sampleRate) * 100) / 100;
-      },
-      GCODECommand() {
-         const pString = `P${this.selectedDriver}`;
-         const sString = `S${this.sampleCount}`;
-         const aString = `A${this.activateMode}`;
-         const rString = `R${this.sampleRateContinuous ? 0 : this.sampleRate}`;
-         const dString = `D${this.selectedVariables.reduce((acc, x) => acc + x.filterValue, 0)}`;
-         //const vString = `V${this.calibrationMovement > 0 ? this.calibrationMovement : 0}`;
-         return `M569.5 ${pString} ${sString} ${aString} ${rString} ${dString} V0`;
-      },
-      ready() {
-         return this.selectedDriver !== null && this.selectedVariables.length > 0;
-      }
-   },
-   watch: {
-      async selectedDriver(to) {
-         if (to) {
-            try {
-               this.pTerm = 0;
-               this.iTerm = 0;
-               this.dTerm = 0;
-               this.aTerm = 0;
-               this.vTerm = 0;
-               var queryResults = await this.sendCode({ code: `M569.1 P${to}`, log: false, fromInput: false });
-               if (queryResults) {
-                  this.pTerm = queryResults.match(/P=[0-9.]+/)[0].substring(2);
-                  this.iTerm = queryResults.match(/I=[0-9.]+/)[0].substring(2);
-                  this.dTerm = queryResults.match(/D=[0-9.]+/)[0].substring(2);
-                  this.aTerm = queryResults.match(/A=[0-9.]+/)[0].substring(2);
-                  this.vTerm = queryResults.match(/V=[0-9.]+/)[0].substring(2);
-               }
+const error = ref<string | null>(null);
+const warning = ref<string | null>(null);
+const recording = ref(false);
+const showDialog = ref(false);
+const dontShowModal = ref(false);
 
-               let selectedAxis = this.axes.filter((axis) => axis.drivers.some((driver) => `${driver.board}.${driver.driver}` === this.selectedDriver));
-               if (selectedAxis.length > 0) {
-                  selectedAxis = selectedAxis[0];
-                  this.moveAcceleration = selectedAxis.acceleration;
-                  this.axisParams = new AxisParameters(selectedAxis.letter, selectedAxis.acceleration, selectedAxis.speed, selectedAxis.stepsPerMm, selectedAxis.microstepping.value);
-               } else {
-                  this.axisParams = null;
-               }
-            } catch (e) {
-               console.log(e);
-            }
-         }
-      },
-      calibrationMovement() {
-         this.activateMode = 0;
-      },
-      closedLoopPoints(to) {
-         if (this.recordingProgress !== null) {
-            this.recordingProgress = (to / this.sampleCount) * 100;
-         }
-      },
-      closedLoopRuns() {
-         this.recordingProgress = null;
-         this.$emit('recordingFinished');
-      }
-   }
-};
+// null = not recording, negative = recording with unknown progress, otherwise percent complete
+const recordingProgress = ref<number | null>(null);
+
+// Acceleration of the axis the selected driver belongs to, null for an extruder driver
+const axisParams = ref<{ letter: AxisLetter, acceleration: number } | null>(null);
+
+const activateModes = computed(() => [
+	{ title: i18n.global.t("plugins.ClosedLoopTuning.recorder.immediately"), value: 0 },
+	{ title: i18n.global.t("plugins.ClosedLoopTuning.recorder.onNextMove"), value: 1 }
+]);
+
+// #region Driver selection
+function driverIdToString(driver: DriverId) {
+	return `${driver.board}.${driver.driver}`;
+}
+
+function isClosedLoopDriver(driver: DriverId) {
+	return machineStore.model.boards.some((board) => board instanceof ExpansionBoard && board.canAddress === driver.board && board.closedLoop !== null);
+}
+
+const drivers = computed(() => {
+	const results: Array<{ name: string, value: string }> = [];
+	for (const axis of machineStore.model.move.axes) {
+		for (const driver of axis.drivers) {
+			if (isClosedLoopDriver(driver)) {
+				results.push({ name: i18n.global.t("plugins.ClosedLoopTuning.recorder.axisDriver", [axis.letter, driverIdToString(driver)]), value: driverIdToString(driver) });
+			}
+		}
+	}
+	machineStore.model.move.extruders.forEach((extruder, index) => {
+		if (extruder.driver !== null && isClosedLoopDriver(extruder.driver)) {
+			results.push({ name: i18n.global.t("plugins.ClosedLoopTuning.recorder.extruderDriver", [index, driverIdToString(extruder.driver)]), value: driverIdToString(extruder.driver) });
+		}
+	});
+	return results;
+});
+
+const closedLoopBoard = computed(() => {
+	if (selectedDriver.value === null) {
+		return null;
+	}
+	const canAddress = parseInt(selectedDriver.value.split(".")[0]);
+	const board = machineStore.model.boards.find((item) => item instanceof ExpansionBoard && item.canAddress === canAddress);
+	return (board instanceof ExpansionBoard) ? board.closedLoop : null;
+});
+
+// #endregion
+
+// #region PID terms
+const canUpdatePID = computed(() => selectedDriver.value !== null && !uiStore.uiFrozen && [pTerm, iTerm, dTerm, aTerm, vTerm].every((term) => term.value !== "" && parseFloat(term.value) >= 0));
+
+function readTerm(reply: string, letter: string) {
+	return reply.match(new RegExp(`${letter}=([0-9.]+)`))?.[1] ?? "0";
+}
+
+async function updatePID() {
+	if (!canUpdatePID.value) {
+		return;
+	}
+
+	updatingPID.value = true;
+	try {
+		await machineStore.sendCode(`M569.1 P${selectedDriver.value} R${pTerm.value} I${iTerm.value} D${dTerm.value} A${aTerm.value} V${vTerm.value}`);
+	} finally {
+		updatingPID.value = false;
+	}
+}
+
+// #endregion
+
+// #region Recording
+const totalTime = computed(() => Math.round((sampleCount.value / sampleRate.value) * 100) / 100);
+
+const canStepManoeuvre = computed(() => axisParams.value !== null);
+
+const collectionCommand = computed(() => {
+	const filter = selectedVariables.value.reduce((acc, variable) => acc + variable.filterValue, 0);
+	return `M569.5 P${selectedDriver.value} S${sampleCount.value} A${activateMode.value} R${sampleRateContinuous.value ? 0 : sampleRate.value} D${filter} V0`;
+});
+
+const stepCommand = computed(() => {
+	const letter = axisParams.value?.letter ?? "";
+	const feedRate = moveSpeed.value * 60;
+	return `G91\nG1 H2 ${letter}${moveDistance.value} F${feedRate}\nG4 P100\nG1 H2 ${letter}-${moveDistance.value} F${feedRate}\nG90`;
+});
+
+const ready = computed(() => selectedDriver.value !== null && selectedVariables.value.length > 0);
+
+function nthThirdOfVariables(column: number) {
+	const recordable = variables.filter((variable) => !variable.hideRecord);
+	const thirdLength = Math.ceil(recordable.length / 3);
+	return recordable.slice(column * thirdLength, (column + 1) * thirdLength);
+}
+
+function record() {
+	if (!ready.value || recording.value) {
+		return;
+	}
+
+	if (calibrationMovement.value === CustomGCode) {
+		if (!customGCode.value) {
+			error.value = i18n.global.t("plugins.ClosedLoopTuning.recorder.enterGCode");
+			return;
+		}
+		startRecording();
+	} else if (dontShowModal.value) {
+		startRecording();
+	} else {
+		showDialog.value = true;
+	}
+}
+
+function confirmRecord() {
+	showDialog.value = false;
+	startRecording();
+}
+
+async function startRecording() {
+	error.value = null;
+	warning.value = null;
+	recording.value = true;
+	recordingProgress.value = -1;
+
+	// The step manoeuvre is driven at its own acceleration, so the axis limit is raised for the run and put back afterwards
+	const axis = (calibrationMovement.value === StepManoeuvre) ? axisParams.value : null;
+	try {
+		if (axis !== null) {
+			await machineStore.sendCode(`M201 ${axis.letter}${moveAcceleration.value}`, false, false);
+		}
+
+		// Collection is requested ahead of the movement so sampling is armed before the move starts
+		const reply = await machineStore.sendCode(`${collectionCommand.value}\n${(calibrationMovement.value === CustomGCode) ? customGCode.value : stepCommand.value}`);
+		if (reply.startsWith("Error: ")) {
+			error.value = reply;
+			recordingProgress.value = null;
+		} else if (reply.startsWith("Warning: ")) {
+			warning.value = reply;
+		}
+	} catch (e) {
+		error.value = getErrorMessage(e);
+		recordingProgress.value = null;
+	} finally {
+		if (axis !== null) {
+			await machineStore.sendCode(`M201 ${axis.letter}${axis.acceleration}`, false, false);
+		}
+		recording.value = false;
+	}
+}
+
+// #endregion
+
+// #region Watches
+watch(selectedDriver, async (to) => {
+	axisParams.value = null;
+	for (const term of [pTerm, iTerm, dTerm, aTerm, vTerm]) {
+		term.value = "0";
+	}
+
+	if (to === null) {
+		return;
+	}
+
+	const axis = machineStore.model.move.axes.find((item) => item.drivers.some((driver) => driverIdToString(driver) === to));
+	if (axis !== undefined) {
+		moveAcceleration.value = axis.acceleration;
+		axisParams.value = { letter: axis.letter, acceleration: axis.acceleration };
+	}
+
+	try {
+		// M569.1 reports the tuning constants but does not surface them in the object model, so the reply has to be parsed
+		const reply = await machineStore.sendCode(`M569.1 P${to}`, false, false);
+		pTerm.value = readTerm(reply, "P");
+		iTerm.value = readTerm(reply, "I");
+		dTerm.value = readTerm(reply, "D");
+		aTerm.value = readTerm(reply, "A");
+		vTerm.value = readTerm(reply, "V");
+	} catch (e) {
+		console.warn(e);
+	}
+});
+
+watch(canStepManoeuvre, (to) => {
+	if (!to) {
+		calibrationMovement.value = CustomGCode;
+	}
+});
+
+watch(calibrationMovement, () => {
+	activateMode.value = 0;
+});
+
+watch(() => closedLoopBoard.value?.points, (to) => {
+	if (recordingProgress.value !== null && to !== undefined) {
+		recordingProgress.value = (to / sampleCount.value) * 100;
+	}
+});
+
+// Selecting another driver also changes the run counter in view, which is not a finished recording
+watch(() => closedLoopBoard.value?.runs, (to, from) => {
+	if (to !== undefined && from !== undefined) {
+		recordingProgress.value = null;
+		emit("recordingFinished");
+	}
+});
+
+// #endregion
 </script>
