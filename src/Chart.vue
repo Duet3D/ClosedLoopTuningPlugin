@@ -33,14 +33,16 @@
 
 			<v-row v-if="hasData" dense align="center" justify="center" class="flex-grow-0 pt-2">
 				<v-col cols="6" sm="3">
-					<v-text-field v-model.number="rangeStartTime" type="number" min="0"
+					<v-text-field :model-value="startTime" type="number" min="0"
 								  :label="$t('plugins.ClosedLoopTuning.chart.start')"
-								  density="compact" hide-details />
+								  density="compact" hide-details
+								  @update:model-value="onStartInput" />
 				</v-col>
 				<v-col cols="6" sm="3">
-					<v-text-field v-model.number="rangeEndTime" type="number" min="0"
+					<v-text-field :model-value="endTime" type="number" min="0"
 								  :label="$t('plugins.ClosedLoopTuning.chart.end')"
-								  density="compact" hide-details />
+								  density="compact" hide-details
+								  @update:model-value="onEndInput" />
 				</v-col>
 				<v-col cols="6" sm="3">
 					<v-btn @click="resetRange">
@@ -102,9 +104,9 @@ let chart: Chart<"line"> | undefined;
 let applyTimer: ReturnType<typeof setTimeout> | null = null;
 
 const rangeFilter = ref<Array<number>>([0, 0]);
-const rangeStartTime = ref(0);
-const rangeEndTime = ref(0);
 const keepRange = ref(false);
+let pendingStart: number | null = null;
+let pendingEnd: number | null = null;
 
 const sampleCount = computed(() => props.data?.Sample?.length ?? 0);
 const hasData = computed(() => props.data !== null && props.variables.length > 0);
@@ -113,6 +115,11 @@ function timestampAt(index: number) {
 	const timestamps = props.data?.Timestamp;
 	return (timestamps && index >= 0 && index < timestamps.length) ? Math.round(timestamps[index]) : 0;
 }
+
+// Derived from the selection rather than mirrored into refs: a two-way binding here feeds every
+// snap back in as if the user had typed it, and the range walks itself inwards one sample at a time
+const startTime = computed(() => timestampAt(rangeFilter.value[0]));
+const endTime = computed(() => timestampAt(rangeFilter.value[1]));
 
 // #region Chart setup
 function buildOptions(): ChartOptions<"line"> {
@@ -205,19 +212,40 @@ function resetRange() {
 	rangeFilter.value = [0, Math.max(sampleCount.value - 1, 0)];
 }
 
-// Map the two time inputs back onto sample indices. Writing rangeFilter re-snaps both inputs to
-// the timestamps actually recorded, which arms this again and settles on the snapped pair
+function onStartInput(value: string) {
+	pendingStart = parseFloat(value);
+	scheduleTimeRange();
+}
+
+function onEndInput(value: string) {
+	pendingEnd = parseFloat(value);
+	scheduleTimeRange();
+}
+
+function scheduleTimeRange() {
+	if (applyTimer !== null) {
+		clearTimeout(applyTimer);
+	}
+	applyTimer = setTimeout(applyTimeRange, 500);
+}
+
+// Snap the typed times onto sample indices. The recorded timestamps are rounded for the comparison
+// exactly as the fields display them, so applying a value the field itself showed is a no-op
 function applyTimeRange() {
 	applyTimer = null;
 
 	const timestamps = props.data?.Timestamp;
-	if (!timestamps) {
+	const wantStart = pendingStart ?? startTime.value;
+	const wantEnd = pendingEnd ?? endTime.value;
+	pendingStart = null;
+	pendingEnd = null;
+	if (!timestamps || Number.isNaN(wantStart) || Number.isNaN(wantEnd)) {
 		return;
 	}
 
-	const start = Math.max(timestamps.findIndex((value) => value >= rangeStartTime.value), 0);
-	const end = timestamps.findLastIndex((value) => value <= rangeEndTime.value);
-	if (end > start && (start !== rangeFilter.value[0] || end !== rangeFilter.value[1])) {
+	const start = Math.max(timestamps.findIndex((value) => Math.round(value) >= wantStart), 0);
+	const end = timestamps.findLastIndex((value) => Math.round(value) <= wantEnd);
+	if (end > start) {
 		rangeFilter.value = [start, end];
 	}
 }
@@ -248,6 +276,14 @@ onBeforeUnmount(() => {
 });
 
 watch(() => props.data, () => {
+	// A value typed against the previous file must not be applied to this one
+	if (applyTimer !== null) {
+		clearTimeout(applyTimer);
+		applyTimer = null;
+	}
+	pendingStart = null;
+	pendingEnd = null;
+
 	if (props.data !== null && !keepRange.value) {
 		resetRange();
 	}
@@ -256,18 +292,7 @@ watch(() => props.data, () => {
 
 watch(() => props.variables, () => updateChart());
 
-watch(rangeFilter, () => {
-	rangeStartTime.value = timestampAt(rangeFilter.value[0]);
-	rangeEndTime.value = timestampAt(rangeFilter.value[1]);
-	updateChart();
-}, { deep: true });
-
-watch([rangeStartTime, rangeEndTime], () => {
-	if (applyTimer !== null) {
-		clearTimeout(applyTimer);
-	}
-	applyTimer = setTimeout(applyTimeRange, 500);
-});
+watch(rangeFilter, () => updateChart(), { deep: true });
 
 watch(() => settingsStore.darkTheme, (to) => applyDarkTheme(to));
 

@@ -1,9 +1,5 @@
 {
 	"menuCaption": "Closed Loop",
-	"tabs": {
-		"record": "Record",
-		"data": "Data"
-	},
 	"chart": {
 		"title": "Data Chart",
 		"selectFile": "Select a file to view",
@@ -23,6 +19,7 @@
 		"deleteAllPrompt": "Are you sure you want to delete all CSV files?"
 	},
 	"recorder": {
+		"title": "Record",
 		"valuesToRecord": "Values to record",
 		"selectDriver": "Select a driver",
 		"driverHint": "Only one motor will be driven, the axis should be re-homed after tuning",

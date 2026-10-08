@@ -1,11 +1,4 @@
 <style scoped>
-/* Scroll the list rather than the card, so the pagination stays reachable on a short viewport */
-.file-list {
-	flex: 1 1 0;
-	min-height: 0;
-	overflow-y: auto;
-}
-
 /* The circular progress is stepped per deleted file, so its default transition lags behind */
 .disable-transition {
 	transition: none !important;
@@ -29,7 +22,7 @@
 
 		<v-progress-linear :active="loading" indeterminate />
 
-		<v-card-text class="file-list pb-0">
+		<v-card-text class="flex-grow-1 pb-0">
 			<div v-if="files.length > 200" class="text-error text-center mb-3">
 				{{ $t("plugins.ClosedLoopTuning.files.tooManyFiles", [files.length]) }}<br>
 				{{ $t("plugins.ClosedLoopTuning.files.tooManyFilesHint") }}

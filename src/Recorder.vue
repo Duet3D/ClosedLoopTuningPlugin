@@ -1,6 +1,11 @@
 <template>
-	<div class="pa-4">
-		<v-row>
+	<v-card class="fill-height">
+		<v-card-title class="pt-2 pb-1">
+			<v-icon class="mr-2">mdi-record-rec</v-icon>
+			{{ $t("plugins.ClosedLoopTuning.recorder.title") }}
+		</v-card-title>
+
+		<v-row class="px-4 pt-2">
 			<v-col cols="12" lg="5">
 				<div class="text-subtitle-1 mb-2">{{ $t("plugins.ClosedLoopTuning.recorder.valuesToRecord") }}</div>
 				<v-row dense>
@@ -104,7 +109,7 @@
 
 		<v-divider class="my-4" />
 
-		<v-row align="center">
+		<v-row align="center" class="px-4 pb-2">
 			<v-col cols="12" sm="auto">
 				<v-btn color="info" :disabled="!ready || recording || uiStore.uiFrozen" @click="record">
 					<v-icon class="mr-2">mdi-record</v-icon>
@@ -151,17 +156,18 @@
 				</v-card-actions>
 			</v-card>
 		</v-dialog>
-	</div>
+	</v-card>
 </template>
 
 <script setup lang="ts">
 import { type AxisLetter, type DriverId, ExpansionBoard } from "@duet3d/objectmodel";
 import { i18n, useMachineStore, useSettingsStore, useUiStore } from "DuetWebControl";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 import { getErrorMessage } from "@/utils/errors";
 
-import { type ClosedLoopVariable, CustomGCode, StepManoeuvre, variables } from "./config";
+import { cached, cachedVariables } from "./cache";
+import { CustomGCode, StepManoeuvre, variables } from "./config";
 
 const emit = defineEmits<{
 	recordingFinished: [];
@@ -176,17 +182,17 @@ const numberRules = [
 	(value: unknown) => !Number.isNaN(parseFloat(String(value))) || i18n.global.t("dialog.numberRequired")
 ];
 
-const selectedDriver = ref<string | null>(null);
-const selectedVariables = ref<Array<ClosedLoopVariable>>([]);
-const sampleCount = ref(500);
-const sampleRate = ref(100);
-const sampleRateContinuous = ref(true);
-const activateMode = ref(0);
-const calibrationMovement = ref(StepManoeuvre);
-const customGCode = ref("");
-const moveSpeed = ref(100);
-const moveDistance = ref(50);
-const moveAcceleration = ref(10000);
+const selectedDriver = cached("selectedDriver");
+const selectedVariables = cachedVariables("recordedVariables");
+const sampleCount = cached("sampleCount");
+const sampleRate = cached("sampleRate");
+const sampleRateContinuous = cached("sampleRateContinuous");
+const activateMode = cached("activateMode");
+const calibrationMovement = cached("calibrationMovement");
+const customGCode = cached("customGCode");
+const moveSpeed = cached("moveSpeed");
+const moveDistance = cached("moveDistance");
+const moveAcceleration = cached("moveAcceleration");
 
 const pTerm = ref("0");
 const iTerm = ref("0");
@@ -199,7 +205,7 @@ const error = ref<string | null>(null);
 const warning = ref<string | null>(null);
 const recording = ref(false);
 const showDialog = ref(false);
-const dontShowModal = ref(false);
+const dontShowModal = cached("skipMovementWarning");
 
 // null = not recording, negative = recording with unknown progress, otherwise percent complete
 const recordingProgress = ref<number | null>(null);
@@ -247,6 +253,12 @@ const closedLoopBoard = computed(() => {
 	return (board instanceof ExpansionBoard) ? board.closedLoop : null;
 });
 
+function applyAxisParams(driver: string | null) {
+	const axis = (driver !== null) ? machineStore.model.move.axes.find((item) => item.drivers.some((item2) => driverIdToString(item2) === driver)) : undefined;
+	axisParams.value = (axis !== undefined) ? { letter: axis.letter, acceleration: axis.acceleration } : null;
+	return axis ?? null;
+}
+
 // #endregion
 
 // #region PID terms
@@ -254,6 +266,26 @@ const canUpdatePID = computed(() => selectedDriver.value !== null && !uiStore.ui
 
 function readTerm(reply: string, letter: string) {
 	return reply.match(new RegExp(`${letter}=([0-9.]+)`))?.[1] ?? "0";
+}
+
+function resetTuningConstants() {
+	for (const term of [pTerm, iTerm, dTerm, aTerm, vTerm]) {
+		term.value = "0";
+	}
+}
+
+async function readTuningConstants(driver: string) {
+	try {
+		// M569.1 reports the tuning constants but does not surface them in the object model, so the reply has to be parsed
+		const reply = await machineStore.sendCode(`M569.1 P${driver}`, false, false);
+		pTerm.value = readTerm(reply, "P");
+		iTerm.value = readTerm(reply, "I");
+		dTerm.value = readTerm(reply, "D");
+		aTerm.value = readTerm(reply, "A");
+		vTerm.value = readTerm(reply, "V");
+	} catch (e) {
+		console.warn(e);
+	}
 }
 
 async function updatePID() {
@@ -353,32 +385,31 @@ async function startRecording() {
 // #endregion
 
 // #region Watches
-watch(selectedDriver, async (to) => {
-	axisParams.value = null;
-	for (const term of [pTerm, iTerm, dTerm, aTerm, vTerm]) {
-		term.value = "0";
+// Restoring a cached driver must not re-apply the axis acceleration over the value the user set
+onMounted(() => {
+	if (selectedDriver.value !== null) {
+		applyAxisParams(selectedDriver.value);
+		readTuningConstants(selectedDriver.value);
 	}
+});
 
+watch(selectedDriver, (to) => {
+	resetTuningConstants();
+	const axis = applyAxisParams(to);
 	if (to === null) {
 		return;
 	}
 
-	const axis = machineStore.model.move.axes.find((item) => item.drivers.some((driver) => driverIdToString(driver) === to));
-	if (axis !== undefined) {
+	if (axis !== null) {
 		moveAcceleration.value = axis.acceleration;
-		axisParams.value = { letter: axis.letter, acceleration: axis.acceleration };
 	}
+	readTuningConstants(to);
+});
 
-	try {
-		// M569.1 reports the tuning constants but does not surface them in the object model, so the reply has to be parsed
-		const reply = await machineStore.sendCode(`M569.1 P${to}`, false, false);
-		pTerm.value = readTerm(reply, "P");
-		iTerm.value = readTerm(reply, "I");
-		dTerm.value = readTerm(reply, "D");
-		aTerm.value = readTerm(reply, "A");
-		vTerm.value = readTerm(reply, "V");
-	} catch (e) {
-		console.warn(e);
+// A cached driver can outlive the board it belongs to, but an empty list only means the machine is not connected yet
+watch(drivers, (to) => {
+	if (to.length > 0 && selectedDriver.value !== null && !to.some((driver) => driver.value === selectedDriver.value)) {
+		selectedDriver.value = null;
 	}
 });
 

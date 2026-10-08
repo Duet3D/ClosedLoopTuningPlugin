@@ -1,13 +1,3 @@
-<style scoped>
-/* Scroll the checkboxes rather than the card, so the All/None buttons stay reachable when the
-   list is taller than the pane */
-.variable-list {
-	flex: 1 1 0;
-	min-height: 0;
-	overflow-y: auto;
-}
-</style>
-
 <template>
 	<v-card variant="flat" class="d-flex flex-column fill-height">
 		<v-card-title class="pt-2 pb-1">
@@ -15,7 +5,7 @@
 			{{ $t("plugins.ClosedLoopTuning.variables.title") }}
 		</v-card-title>
 
-		<v-card-text class="variable-list px-2 py-0 pr-4">
+		<v-card-text class="flex-grow-1 px-2 py-0 pr-4">
 			<v-checkbox v-for="variable in chartableVariables" :key="variable.id"
 						v-model="selectedVariables" :label="variable.column" :value="variable"
 						:disabled="!availableVariables.includes(variable.column)"
